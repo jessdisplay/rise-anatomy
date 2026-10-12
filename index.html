@@ -144,6 +144,9 @@ details.part:not([open]) { gap: 0; }
 .guide { display: flex; flex: none; flex-direction: column; width: 23rem; min-height: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); font-size: max(0.9375rem, 15px); line-height: 1.4; }
 .guide-head { display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-s4) var(--spacing-s4) var(--spacing-s3) var(--spacing-s5); }
 .guide-head h2 { font-size: 1.125em; font-weight: 600; }
+.walk { display: flex; gap: var(--spacing-s3); padding: 0 var(--spacing-s4) var(--spacing-s4); }
+.walk .walk-next { flex: 1; min-width: 0; justify-content: space-between; }
+.walk-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tally { display: flex; flex-wrap: wrap; gap: var(--spacing-s2); padding: 0 var(--spacing-s4) var(--spacing-s4); border-bottom: 1px solid var(--border); }
 .guide-list { flex: 0 1 auto; min-height: 0; max-height: 64%; overflow-y: auto; padding: var(--spacing-s3); display: grid; gap: var(--spacing-s3); align-content: start; }
 .guide-step { display: grid; gap: 1px; }
@@ -486,6 +489,13 @@ details.part:not([open]) { gap: 0; }
     return h("aside", { className: "guide", "aria-label": auditor ? "Audit of this binder" : "Guide to this binder" },
       h("div", { className: "guide-head" }, h("h2", null, auditor ? "Audit" : "Guide"),
         h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", "aria-label": "Close the guide", onClick: props.close }, h(R.Icon, { name: "close" }))),
+      h("div", { className: "walk" },
+        h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", disabled: !props.walk.prev,
+          title: props.walk.prev ? "Previous: " + props.walk.prev.label : undefined, onClick: props.walk.prev ? props.walk.prev.go : undefined },
+          h(R.Icon, { name: "arrow-left" }), "Previous"),
+        h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "walk-next", disabled: !props.walk.next,
+          title: props.walk.next ? "Next: " + props.walk.next.label : undefined, onClick: props.walk.next ? props.walk.next.go : undefined },
+          h("span", { className: "walk-label" }, props.walk.next ? "Next: " + props.walk.next.label : "End of the library"), h(R.Icon, { name: "arrow-right" }))),
       auditor ? h("div", { className: "tally" }, tally.map(function (x) {
         return h(R.Button, { key: x[0], type: "button", variant: "tab", size: "sm", emphasis: filter === x[0] ? "solid" : "soft", "aria-pressed": filter === x[0],
           onClick: function () { setFilter(x[0]); } }, x[1] + " " + x[2]);
@@ -603,7 +613,7 @@ details.part:not([open]) { gap: 0; }
     mode.current = props.mode;
     guided.current = guide && wide();
     var room = function () { return capacity(STEPS.length, mode.current, guided.current); };
-    var o = React.useState(function () { return STEPS.slice(0, props.mode === "provider" ? 1 : Math.min(2, room())); }), open = o[0], setOpen = o[1];  // oldest first
+    var o = React.useState(function () { return STEPS.slice(0, 1); }), open = o[0], setOpen = o[1];  // oldest first
     var p = React.useState(function () {
       var first = {};
       STEPS.forEach(function (step) { first[step] = docsOf(step).length === 1 && !data.steps[step].unread.length ? docsOf(step)[0].id : ""; });
@@ -634,15 +644,10 @@ details.part:not([open]) { gap: 0; }
       return function () { window.removeEventListener("resize", fit); };
     }, []);
 
-    // Changing view: a provider keeps the page last opened; an auditor gets a second beside it.
+    // Changing view keeps what is being read: a provider keeps the page last opened, an auditor every page open.
     React.useEffect(function () {
       if (!started.current) { started.current = true; return; }
-      setOpen(function (now) {
-        if (props.mode === "provider") return [now[now.length - 1]];
-        var next = now.slice();
-        STEPS.forEach(function (step) { if (next.length < Math.min(2, room()) && next.indexOf(step) === -1) next.push(step); });
-        return next;
-      });
+      if (props.mode === "provider") setOpen(function (now) { return [now[now.length - 1]]; });
     }, [props.mode]);
 
     // Open pages, keeping `kept` on screen: when the window is full, the page opened longest ago makes room.
@@ -716,7 +721,7 @@ details.part:not([open]) { gap: 0; }
         if (link.dataset.open) {
           var to = link.dataset.open.split("|");
           pick(to[0], to[1] || "");
-          if (props.mode === "provider" && open.indexOf(to[0]) === -1) only(to[0]); else show([to[0]], null);
+          if (open.indexOf(to[0]) === -1 && link.closest(".guide")) only(to[0]); else show([to[0]], null);
           return;
         }
         if (link.dataset.jump) { setLit({ id: link.dataset.jump, n: Date.now() }); return; }
@@ -813,6 +818,22 @@ details.part:not([open]) { gap: 0; }
     // The page the guide indexes: the one last opened, followed to or scrolled, while it is still open.
     var current = open.indexOf(active) !== -1 ? active : open[open.length - 1];
 
+    // The walk: every document of this binder in reading order, then on to the next standard. An
+    // audit goes down a list one document at a time, so each step shows its page on its own.
+    var stops = [];
+    lib.steps.forEach(function (step) {
+      docsOf(step.key).forEach(function (doc) { stops.push({ step: step.key, id: doc.id, label: docsOf(step.key).length > 1 ? doc.title : step.label }); });
+    });
+    var at = stops.findIndex(function (s) { return s.step === current && s.id === picked[current]; }), level = STEPS.indexOf(current);
+    var before = stops.filter(function (s, i) { return STEPS.indexOf(s.step) < level || (s.step === current && at !== -1 && i < at); });
+    var after = stops.filter(function (s, i) { return STEPS.indexOf(s.step) > level || (s.step === current && (at === -1 || i > at)); });
+    var standards = [].concat.apply([], lib.modules.map(function (m) { return m.standards; }));
+    var place = standards.findIndex(function (x) { return x.key === data.key; });
+    var toStop = function (stop) { return { label: stop.label, go: function () { pick(stop.step, stop.id); only(stop.step); } }; };
+    var toStandard = function (x) { return x ? { label: x.index + " " + x.heading, go: function () { props.openBinder(x.key); } } : null; };
+    var walk = { prev: before.length ? toStop(before[before.length - 1]) : toStandard(standards[place - 1]),
+      next: after.length ? toStop(after[0]) : toStandard(standards[place + 1]) };
+
     // Every step keeps its spine, in order; an open step has its page straight after its spine.
     var kids = [];
     STEPS.forEach(function (step, i) {
@@ -849,7 +870,7 @@ details.part:not([open]) { gap: 0; }
       h("div", { className: "book-row" },
         h(R.DocumentSpread, { className: "relative" }, kids),
         guide ? h(Guide, { mode: props.mode, lib: lib, docsOf: docsOf, entriesFor: entriesFor, open: open, picked: picked, here: here, current: current,
-          verdicts: props.verdicts, close: function () { setGuide(false); } }) : null),
+          verdicts: props.verdicts, walk: walk, close: function () { setGuide(false); } }) : null),
       word ? h("aside", { className: "meaning", role: "status" },
         h("p", null, h("strong", null, word.term + ": "), word.meaning),
         h("p", { className: "quiet" }, "Defined once, in " + word.source + ", Words we use. Every page in the binder uses that one wording."),
