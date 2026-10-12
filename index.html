@@ -44,7 +44,11 @@
 .all-docs { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--spacing-s6); font-size: max(0.9375rem, 15px); }
 .badges { display: inline-flex; flex-wrap: wrap; gap: var(--spacing-s2); }
 .off-note { max-width: 60rem; padding: var(--spacing-s3) var(--spacing-s4); border-left: 3px solid var(--warning-solid); background: var(--warning-subtle); font-size: max(0.875rem, 14px); line-height: 1.5; }
-.step-table { font-size: max(0.9375rem, 15px); overflow-x: auto; }
+.doc-list { display: grid; max-width: 48rem; list-style: none; font-size: max(1rem, 16px); line-height: 1.5; }
+.doc-cell { display: grid; gap: var(--spacing-s2); min-width: 0; padding-block: var(--spacing-s5); border-top: 1px solid var(--border); }
+.doc-cell:first-child { padding-top: 0; border-top: 0; }
+.doc-cell > strong { font-size: 1.125em; }
+.doc-cell .doc-open { justify-self: start; }
 .subs { list-style: none; display: grid; gap: var(--spacing-s2); padding-left: 0; margin-top: var(--spacing-s2); }
 .doc ol.subs { list-style: none; padding-left: 0; }
 .subs > li { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); }
@@ -52,14 +56,21 @@
 .pills { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s3); }
 .work { display: flex; flex: 1; flex-direction: column; gap: var(--spacing-s5); min-height: 0; width: 100%; padding: var(--spacing-s6) var(--spacing-s7) var(--spacing-s7); }
 .binder-page { min-width: 0; }
-.binder-page.is-tight { padding: var(--spacing-s6) var(--spacing-s5); gap: var(--spacing-s5); }
 
-/* ---- one page: its controls and its sheet, at the platform's own 48rem. */
-.pane-fit { display: flex; flex: 1; justify-content: center; min-width: 0; min-height: 0; width: 100%; container-type: inline-size; }
-.pane { display: flex; flex: 1; flex-direction: column; gap: var(--spacing-s5); min-width: 0; min-height: 0; max-width: var(--container-sheet); }
+/* ---- one page. The document is the page: it starts under the title, on the title's own left
+ * edge, and scrolls with the page, so it has the whole height of the window and no box of its
+ * own. The title stays put above it. */
+[data-slot="document-page"].binder-page { gap: 0; padding: 0; overflow: hidden auto; }
+.binder-page:last-child { border-radius: 0 var(--radius-2xl) var(--radius-2xl) 0; }  /* the last page meets the book's rounded corner, and rounds with it */
+.binder-page > :first-child { position: sticky; top: 0; z-index: 2; padding: var(--spacing-s7) var(--spacing-s8) var(--spacing-s5); border-bottom: 1px solid var(--border); background: var(--card); }
+.binder-page > :last-child { flex: none; justify-content: flex-start; padding: var(--spacing-s7) var(--spacing-s8) var(--spacing-s8); }
+.binder-page.is-tight > :first-child { padding: var(--spacing-s6) var(--spacing-s5) var(--spacing-s4); }
+.binder-page.is-tight > :last-child { padding: var(--spacing-s6) var(--spacing-s5); }
+.pane-fit { display: flex; flex: 1; min-width: 0; width: 100%; container-type: inline-size; }
+.pane { display: flex; flex: 1; flex-direction: column; gap: var(--spacing-s5); min-width: 0; }
+.pane .pane-top { position: sticky; bottom: var(--spacing-s5); align-self: flex-end; background: var(--card); opacity: 0; pointer-events: none; transition: opacity var(--duration-normal) var(--ease-out); }
+.pane .pane-top.is-shown { opacity: 1; pointer-events: auto; }
 .pane-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s3); }
-.pane-row { display: flex; flex: 1; gap: var(--spacing-s5); min-height: 0; }
-.pane-sheet { min-width: 0; }
 .ix-row { display: grid; grid-template-columns: 3.75rem minmax(0, 1fr); gap: var(--spacing-s3); align-items: baseline; padding: var(--spacing-s2) var(--spacing-s3); border-radius: var(--radius-sm); font-size: max(0.875rem, 14px); line-height: 1.45; color: var(--foreground); text-decoration: none; }
 .ix-row .ix { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--tab-soft-foreground); }
 .ix-row .ix-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -69,30 +80,31 @@
 .ix-row.is-here { background: var(--tab-soft); }
 .ix-group { padding: var(--spacing-s3) var(--spacing-s3) var(--spacing-s1); font-size: max(0.875rem, 14px); color: var(--muted-foreground); }
 @container (max-width: 38rem) {
-  .pane-sheet > div { padding: var(--spacing-s5); }
   .doc { --hang: 3.75rem; }
 }
 /* On a phone the book keeps its spines, so the page is narrow: the address sits above its
  * text instead of beside it, and the sheet gives its margin back to the words. */
 @media (max-width: 47.99rem) {
   .bar, .work { padding-inline: var(--spacing-s4); }
-  .binder-page { padding: var(--spacing-s4); gap: var(--spacing-s4); }
-  .binder-page [class*="max-w-sheet"] { padding: var(--spacing-s4); }
+  .binder-page > :first-child, .binder-page > :last-child { padding: var(--spacing-s4); }
   .doc { --hang: 0rem; gap: var(--spacing-s7); }
-  .doc .item, .doc .part > h3 { grid-template-columns: minmax(0, 1fr); }
-  .doc .part > h3 .ix { font-size: 0.75em; }
+  .doc .item, .doc .part h3 { grid-template-columns: minmax(0, 1fr); }
+  .doc .part h3 .ix { font-size: 0.75em; }
 }
 
 /* ---- a document inside a page */
-.doc { --hang: 4.75rem; display: grid; gap: var(--spacing-s7); max-width: 42rem; font-size: max(1rem, 16px); line-height: 1.6; color: var(--foreground); }
+.doc { --hang: 4.75rem; display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--spacing-s7); max-width: calc(var(--hang) + 68ch); font-size: max(1rem, 16px); line-height: 1.6; color: var(--foreground); }
+.doc.is-wide { max-width: none; }  /* a register is a table: it takes the width of the page, and its words keep their own measure */
 .doc > * { min-width: 0; }
 .doc p, .doc li, .doc dd { max-width: 68ch; }
 .doc .ix { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--tab-soft-foreground); }
 .part { display: grid; gap: var(--spacing-s4); scroll-margin-top: var(--spacing-s5); }
-.part > h3 { display: grid; grid-template-columns: var(--hang) minmax(0, 1fr); align-items: baseline; font-size: 1.375em; line-height: 1.3; font-weight: 600; }
-details.part > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--spacing-s2) var(--spacing-s5); cursor: pointer; list-style: none; padding-block: var(--spacing-s3); border-top: 1px solid var(--border); }
+.doc > .part { padding-top: var(--spacing-s6); border-top: 1px solid var(--border); }  /* open or closed, every part starts the same way */
+.doc > .part:first-child { padding-top: 0; border-top: 0; }
+.part h3 { display: grid; grid-template-columns: var(--hang) minmax(0, 1fr); align-items: baseline; font-size: 1.375em; line-height: 1.3; font-weight: 600; }
+details.part > summary { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--spacing-s2) var(--spacing-s5); cursor: pointer; list-style: none; }
 details.part > summary::-webkit-details-marker { display: none; }
-details.part > summary > h3 { display: grid; grid-template-columns: var(--hang) minmax(0, 1fr); align-items: baseline; flex: 1; font-size: 1.125em; line-height: 1.3; font-weight: 600; }
+details.part > summary > h3 { flex: 1; }
 details.part > summary .count { font-size: 0.875em; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
 details.part > summary .count::after { content: "  Show"; font-weight: 600; color: var(--foreground); text-decoration: underline; text-underline-offset: 0.2em; }
 details.part[open] > summary .count::after { content: "  Hide"; }
@@ -116,12 +128,11 @@ details.part:not([open]) { gap: 0; }
 .lk:not(:last-of-type)::after { content: ", "; }
 .lk-more { font-style: normal; }
 
-/* ---- two views of the same pages. Reading is what a worker opens: one page, parts named in
- * words, only where a part leads, and none of the tools for judging the anatomy. Review is
- * the whole of it: codes, both directions of every link, word counts and departures. */
-.is-worker .as-code, .is-auditor .as-name, .is-auditor .lk-more { display: none; }
-.is-worker .rel.arriving, .is-worker .trail:not(.leads), .is-worker .lk:nth-of-type(n+4) { display: none; }
-.is-worker .lk:nth-of-type(3):not(:last-of-type)::after { content: " "; }
+/* ---- two views of the same pages. A provider opens one page, with parts named in words and
+ * only where a part leads. An auditor gets codes and both directions of every link. */
+.is-provider .as-code, .is-auditor .as-name, .is-auditor .lk-more { display: none; }
+.is-provider .rel.arriving, .is-provider .trail:not(.leads), .is-provider .lk:nth-of-type(n+4) { display: none; }
+.is-provider .lk:nth-of-type(3):not(:last-of-type)::after { content: " "; }
 /* The extras for judging the design itself stay out of both views until Design tools is ticked. */
 .frame:not(.has-tools) details.part > summary .count { font-size: 0; }
 .frame:not(.has-tools) details.part > summary .count::after { font-size: max(0.875rem, 14px); }
@@ -251,8 +262,9 @@ details.part:not([open]) { gap: 0; }
     for (var box = target.parentElement; box && !box.classList.contains("frame"); box = box.parentElement) {
       var style = window.getComputedStyle(box), frame = box.getBoundingClientRect(), at = target.getBoundingClientRect();
       if (/auto|scroll/.test(style.overflowY) && box.scrollHeight > box.clientHeight) {
-        var room = Math.max(0, (box.clientHeight - at.height) / 2);
-        box.scrollTo({ top: box.scrollTop + at.top - frame.top - Math.min(room, box.clientHeight / 3), behavior: how });
+        var head = box.matches('[data-slot="document-page"]') ? box.firstElementChild.offsetHeight + 16 : 0;  // the title that stays put above the document
+        var room = Math.max(0, (box.clientHeight - head - at.height) / 2);
+        box.scrollTo({ top: box.scrollTop + at.top - frame.top - head - Math.min(room, box.clientHeight / 3), behavior: how });
       } else if (/auto|scroll/.test(style.overflowX) && box.scrollWidth > box.clientWidth) {
         var pinned = box.querySelector("tbody td:first-child");
         var lead = pinned && pinned !== target ? pinned.getBoundingClientRect().width : 0;
@@ -401,7 +413,7 @@ details.part:not([open]) { gap: 0; }
     });
     var picked = G.columns.filter(function (c) { return c.letter === props.column; })[0];
     var block = function (name, text) { return h(Part, { part: partNamed(G.parts, name) }, h("div", Object.assign({ className: "plain" }, html(text)))); };
-    return h("div", { className: "doc" },
+    return h("div", { className: "doc is-wide" },
       block("What this proves", G.proves),
       h(Part, { part: partNamed(G.parts, "Columns") },
         G.sheets.length > 1 ? h("div", { className: "sheets" }, G.sheets.map(function (s, i) {
@@ -507,12 +519,15 @@ details.part:not([open]) { gap: 0; }
         })));
   }
 
-  // One page's frame: its controls and its sheet. It reports the part being read, so the guide can mark it.
+  // One page's frame. The document is the page: it scrolls with it, so it has the whole height of
+  // the window. The frame reports the part being read, so the guide can mark it, and offers the
+  // way back to the top once the reader has left it.
   function Pane(props) {
     var fit = React.useRef(null), entries = React.useRef(props.entries), tell = React.useRef(props.onHere), held = React.useRef(null);
+    var m = React.useState(false), away = m[0], setAway = m[1];  // the reader has left the top of the document
     entries.current = props.entries;
     tell.current = props.onHere;
-    var scroller = function () { return fit.current && fit.current.querySelector('[data-slot="document-sheet"] > div'); };
+    var scroller = function () { return fit.current && fit.current.closest('[data-slot="document-page"]'); };
 
     // A part the reader was just taken to is the part being read, until they move the page themselves.
     React.useEffect(function () {
@@ -523,15 +538,16 @@ details.part:not([open]) { gap: 0; }
       tell.current(id, true);
     }, [props.lit]);
 
-    // The part being read is the last one whose top has reached the top of the sheet.
+    // The part being read is the last one whose top has reached the top of the page, under its title.
     React.useEffect(function () {
       var box = scroller();
       if (!box) return undefined;
       var waiting = false;
       function measure(moved) {
         waiting = false;
+        setAway(box.scrollTop > 240);
         if (held.current) { tell.current(held.current, moved === true); return; }
-        var line = box.getBoundingClientRect().top + 120, found = null;
+        var line = box.getBoundingClientRect().top + box.firstElementChild.offsetHeight + 64, found = null;
         entries.current.forEach(function (e) {
           if (!e.id || e.sideways) return;
           var part = document.getElementById(e.id);
@@ -553,22 +569,22 @@ details.part:not([open]) { gap: 0; }
 
     return h("div", { className: "pane-fit", ref: fit },
       h("div", { className: "pane" },
-        h("div", { className: "pane-controls" },
-          h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm",
-            onClick: function () { var box = scroller(); if (box) box.scrollTo({ top: 0, behavior: calm ? "auto" : "smooth" }); } },
-            h(R.Icon, { name: "arrow-up" }), "Top"),
-          props.more),
-        h("div", { className: "pane-row" }, h(R.DocumentSheet, { className: "pane-sheet" }, props.children))));
+        props.more ? h("div", { className: "pane-controls" }, props.more) : null,
+        props.children,
+        h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", className: "pane-top" + (away ? " is-shown" : ""),
+          tabIndex: away ? 0 : -1, "aria-hidden": !away,
+          onClick: function () { var box = scroller(); if (box) box.scrollTo({ top: 0, behavior: calm ? "auto" : "smooth" }); } },
+          h(R.Icon, { name: "arrow-up" }), "Top")));
   }
 
   // ---- the book: one binder
 
   // How many pages the window can hold side by side: each needs about 40rem beside the spines.
-  // How many pages fit beside the spines and the guide. A support worker is shown one page, and a
+  // How many pages fit beside the spines and the guide. A provider is shown one page, and a
   // second only when a link asks for it.
   function capacity(steps, mode, guide) {
     var fit = Math.max(1, Math.min(steps, Math.floor((window.innerWidth - rem() * (guide ? 28 : 4) - steps * 24) / (rem() * 40))));
-    return mode === "worker" ? Math.min(2, fit) : fit;
+    return mode === "provider" ? Math.min(2, fit) : fit;
   }
   // The same line the stylesheet draws: below it the guide is a drawer over the book, not a column beside it.
   var wide = function () { return window.matchMedia("(min-width: 72rem)").matches; };
@@ -587,7 +603,7 @@ details.part:not([open]) { gap: 0; }
     mode.current = props.mode;
     guided.current = guide && wide();
     var room = function () { return capacity(STEPS.length, mode.current, guided.current); };
-    var o = React.useState(function () { return STEPS.slice(0, props.mode === "worker" ? 1 : Math.min(2, room())); }), open = o[0], setOpen = o[1];  // oldest first
+    var o = React.useState(function () { return STEPS.slice(0, props.mode === "provider" ? 1 : Math.min(2, room())); }), open = o[0], setOpen = o[1];  // oldest first
     var p = React.useState(function () {
       var first = {};
       STEPS.forEach(function (step) { first[step] = docsOf(step).length === 1 && !data.steps[step].unread.length ? docsOf(step)[0].id : ""; });
@@ -618,11 +634,11 @@ details.part:not([open]) { gap: 0; }
       return function () { window.removeEventListener("resize", fit); };
     }, []);
 
-    // Changing view: a support worker keeps the page last opened; an auditor gets a second beside it.
+    // Changing view: a provider keeps the page last opened; an auditor gets a second beside it.
     React.useEffect(function () {
       if (!started.current) { started.current = true; return; }
       setOpen(function (now) {
-        if (props.mode === "worker") return [now[now.length - 1]];
+        if (props.mode === "provider") return [now[now.length - 1]];
         var next = now.slice();
         STEPS.forEach(function (step) { if (next.length < Math.min(2, room()) && next.indexOf(step) === -1) next.push(step); });
         return next;
@@ -700,7 +716,7 @@ details.part:not([open]) { gap: 0; }
         if (link.dataset.open) {
           var to = link.dataset.open.split("|");
           pick(to[0], to[1] || "");
-          if (props.mode === "worker" && open.indexOf(to[0]) === -1) only(to[0]); else show([to[0]], null);
+          if (props.mode === "provider" && open.indexOf(to[0]) === -1) only(to[0]); else show([to[0]], null);
           return;
         }
         if (link.dataset.jump) { setLit({ id: link.dataset.jump, n: Date.now() }); return; }
@@ -744,20 +760,24 @@ details.part:not([open]) { gap: 0; }
       return list;
     }
 
-    // The documents on one page of the binder, as the platform lists them: one row each.
+    // The documents on one page of the binder, as a plain list: everything about a document sits
+    // under its title, so the list reads at any width and nothing runs off the side.
     function stepTable(step) {
       var label = lib.steps.filter(function (x) { return x.key === step; })[0].label.toLowerCase();
+      var row = function (id, title, under, badges, last) {
+        return h("li", { className: "doc-cell", key: id }, h("strong", null, title), h("span", { className: "quiet" }, under), badges, last);
+      };
       var list = docsOf(step).map(function (doc) {
-        return { id: doc.id, cells: { doc: doc.id, title: doc.title, words: doc.words.toLocaleString(),
-          status: h("span", { className: "badges" }, h(R.Badge, { tone: "neutral", size: "sm" }, "Offered, not adopted"), doc.off ? h(R.Badge, { tone: "warning", size: "sm", title: doc.off }, "Outside the anatomy") : null),
-          open: h(R.Button, { variant: "neutral", emphasis: "link", size: "sm", "data-open": step + "|" + doc.id }, "View document") } };
+        return row(doc.id, doc.title, doc.id + (props.tools ? ", " + doc.words.toLocaleString() + " words" : ""), h("span", { className: "badges" },
+            h(R.Badge, { tone: "neutral", size: "sm" }, "Offered, not adopted"),
+            doc.off ? h(R.Badge, { tone: "warning", size: "sm", title: doc.off }, "Outside the anatomy") : null,
+            props.verdicts[doc.id] ? verdictBadge(props.verdicts[doc.id]) : null),
+          h(R.Button, { variant: "neutral", emphasis: "link", size: "sm", className: "doc-open", "data-open": step + "|" + doc.id }, "View document"));
       }).concat(data.steps[step].unread.map(function (doc) {
-        return { id: doc.id, cells: { doc: doc.id, title: doc.title, words: "", status: h(R.Badge, { tone: "warning", size: "sm" }, "Could not be read"), open: h("span", { className: "quiet" }, doc.problem) } };
+        return row(doc.id, doc.title, doc.id, h(R.Badge, { tone: "warning", size: "sm" }, "Could not be read"), h("span", { className: "quiet" }, doc.problem));
       }));
       if (!list.length) return h("div", { className: "doc" }, h("p", null, "No " + label + " template for this standard at 0.3.0."));
-      return h("div", { className: "step-table" }, h(R.DataTable, { caption: "Linked " + label + " documents",
-        columns: [{ key: "doc", header: "Document" }, { key: "title", header: "Title" }, { key: "words", header: "Words", align: "right" },
-                  { key: "status", header: "Status" }, { key: "open", header: "" }], rows: list }));
+      return h("ul", { className: "doc-list", "aria-label": "Linked " + label + " documents" }, list);
     }
 
     function body(step, doc) {
@@ -798,18 +818,18 @@ details.part:not([open]) { gap: 0; }
     STEPS.forEach(function (step, i) {
       var isOpen = open.indexOf(step) !== -1;
       kids.push(h(R.PageSpine, { key: "spine-" + step, number: i + 1, active: isOpen,
-        onClick: function () { if (isOpen || props.mode === "worker") only(step); else show([step], null); } }));
+        onClick: function () { if (isOpen || props.mode === "provider") only(step); else show([step], null); } }));
       if (isOpen) kids.push(page(step));
     });
 
-    // A pill opens its page: in place of the one showing when reading, beside the others when reviewing.
+    // A pill opens its page: in place of the one showing for a provider, beside the others for an auditor.
     // Pressed on an open page it closes it. One page always stays open.
     var pills = lib.steps.map(function (x) {
       var isOpen = open.indexOf(x.key) !== -1;
       return h(R.Button, { key: x.key, variant: "tab", size: "md", emphasis: isOpen ? "solid" : "soft", className: "font-normal",
         "data-step": x.key, "aria-pressed": isOpen,
         onClick: function () {
-          if (!isOpen) { if (props.mode === "worker") only(x.key); else show([x.key], null); }
+          if (!isOpen) { if (props.mode === "provider") only(x.key); else show([x.key], null); }
           else if (open.length > 1) setOpen(open.filter(function (y) { return y !== x.key; }));
         } }, h("span", { className: "pill-dot" }), x.label);
     });
@@ -997,7 +1017,7 @@ details.part:not([open]) { gap: 0; }
     var v = React.useState("binder"), view = v[0], setView = v[1];
     var a = React.useState(null), arrive = a[0], setArrive = a[1];
     var c = React.useState(false), colour = c[0], setColour = c[1];
-    var m = React.useState("worker"), mode = m[0], setMode = m[1];  // who the page is guiding
+    var m = React.useState("provider"), mode = m[0], setMode = m[1];  // who the page is guiding
     var t = React.useState(false), tools = t[0], setTools = t[1];   // the extras for judging the design itself
     var vd = React.useState({}), verdicts = vd[0], setVerdicts = vd[1];
     var auditor = mode === "auditor";
@@ -1039,11 +1059,11 @@ details.part:not([open]) { gap: 0; }
         h(R.RiseWordmark, { className: "mark" }),
         h("div", { className: "bar-tools" },
           h("div", { className: "views" },
-            h(R.Button, { variant: "tab", size: "sm", emphasis: !auditor ? "solid" : "soft", "aria-pressed": !auditor, onClick: function () { setMode("worker"); setView("binder"); } }, "Support worker"),
+            h(R.Button, { variant: "tab", size: "sm", emphasis: !auditor ? "solid" : "soft", "aria-pressed": !auditor, onClick: function () { setMode("provider"); } }, "Provider"),
             h(R.Button, { variant: "tab", size: "sm", emphasis: auditor ? "solid" : "soft", "aria-pressed": auditor, onClick: function () { setMode("auditor"); } }, "Auditor")),
-          auditor ? h("div", { className: "views" },
+          h("div", { className: "views" },
             h(R.Button, { variant: "tab", size: "sm", emphasis: view === "binder" ? "solid" : "soft", "aria-pressed": view === "binder", onClick: function () { setView("binder"); } }, "Binder"),
-            h(R.Button, { variant: "tab", size: "sm", emphasis: view === "table" ? "solid" : "soft", "aria-pressed": view === "table", onClick: function () { setView("table"); } }, "All documents")) : null,
+            h(R.Button, { variant: "tab", size: "sm", emphasis: view === "table" ? "solid" : "soft", "aria-pressed": view === "table", onClick: function () { setView("table"); } }, "All documents")),
           h(Search, { here: key, steps: lib.steps, open: function (row) {
             var doc = row.a.split(" ").slice(0, row.a.charAt(0) === "s" ? 2 : 1).join(" ");
             var stay = data && (data.where[row.a] || data.where[doc]);
