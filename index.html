@@ -312,7 +312,11 @@ details.part:not([open]) { gap: 0; }
       var text = box.textContent, from = 0, ends = /[.!?]["\u201d)\]]?\s+(?=[A-Z"\u201c\[(])/g, found, spans = [];
       if (CAN_PAINT) while ((found = ends.exec(text))) { spans.push([from, found.index + found[0].replace(/\s+$/, "").length]); from = found.index + found[0].length; }
       if (text.slice(from).trim()) spans.push([from, text.length]);
-      spans.forEach(function (span) { out.push({ box: box, from: span[0], to: span[1], text: text.slice(span[0], span[1]).trim() }); });
+      var name = box.querySelector("dt"), lead = name ? name.textContent.length : 0;  // a named row reads "Result: ..."
+      spans.forEach(function (span) {
+        var said = text.slice(span[0], span[1]).trim();
+        out.push({ box: box, from: span[0], to: span[1], text: lead && span[0] === 0 ? said.slice(0, lead) + ": " + said.slice(lead) : said });
+      });
     });
     return out;
   }
