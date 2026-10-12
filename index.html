@@ -226,6 +226,7 @@ details.part:not([open]) { gap: 0; }
 .doc .item[data-notes] { position: relative; }
 .doc .item[data-notes]::after { content: attr(data-notes); position: absolute; left: 0; top: calc(var(--spacing-s5) + 2em); min-width: 1.75rem; padding: 0 var(--spacing-s2); border: 1px solid var(--primary-solid); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0; background: var(--primary-surface); color: var(--primary-foreground); font-size: 14px; font-weight: 600; line-height: 1.5; text-align: center; }
 /* one line of a statement, selected or commented on: painted as a range, so the page itself is not changed */
+.sweep-offer { position: fixed; z-index: 30; }  /* the Comment offer beside words just highlighted */
 .doc ::selection { background-color: var(--primary-soft); color: var(--foreground); }  /* Rise yellow, not the browser's blue */
 ::highlight(rise-noted) { background-color: var(--primary-surface); }
 ::highlight(rise-picked) { background-color: var(--primary-soft); }
@@ -870,13 +871,20 @@ details.part:not([open]) { gap: 0; }
     var hr = React.useState({}), here = hr[0], setHere = hr[1];        // the part being read, per page
     var ac = React.useState(null), active = ac[0], setActive = ac[1];  // the page last opened, followed to or scrolled
     var tr = React.useState(null), trace = tr[0], setTrace = tr[1];    // the statement being traced, and where it appears
-    var book = React.useRef(null), swept = React.useRef(0);  // when words were last highlighted, so the click that ends the sweep is not read as a selection
+    var book = React.useRef(null);
+    var of = React.useState(null), offer = of[0], setOffer = of[1];  // words just highlighted, and where to offer a comment on them
     var sz = React.useState("side"), size = sz[0], setSize = sz[1];    // how much of the window the guide takes: side, half or full
     var pd = React.useState(null), pending = pd[0], setPending = pd[1];  // a comment's place to go back to, once its page is drawn
     var guided = React.useRef(0);                                      // the width the guide takes beside the book, in rem
     guided.current = guide && wide() ? (size === "side" ? 24 : window.innerWidth / (size === "half" ? 2 : 1) / rem()) : 0;
     var room = function () { return capacity(STEPS.length, guided.current); };
-    var o = React.useState(function () { return STEPS.slice(0, 1); }), open = o[0], setOpen = o[1];  // oldest first
+    // The pages to show around one of them: that page alone, or with as many of the others as fit when working side by side.
+    function around(step) {
+      var want = [step];
+      if (props.layout === "split") STEPS.forEach(function (other) { if (want.length < room() && want.indexOf(other) === -1) want.push(other); });
+      return want;
+    }
+    var o = React.useState(function () { return around(STEPS[0]); }), open = o[0], setOpen = o[1];  // oldest first
     var p = React.useState(function () {
       var first = {};
       STEPS.forEach(function (step) { first[step] = docsOf(step).length && !data.steps[step].unread.length ? docsOf(step)[0].id : ""; });
@@ -925,6 +933,19 @@ details.part:not([open]) { gap: 0; }
     }
 
     function only(step) { setActive(step); setOpen([step]); }
+    function land(step) { setActive(step); setOpen(around(step)); }  // arrive on a page, in the way of working chosen
+    // Open a page at one end of the row and, if the row is full, close the page at the other end.
+    function slide(step, close) {
+      setActive(step);
+      setOpen(function (now) {
+        var next = now.indexOf(step) === -1 ? now.concat(step) : now.slice();
+        if (next.length > room()) {
+          var rest = STEPS.filter(function (s) { return next.indexOf(s) !== -1 && s !== step; }), drop = close === "first" ? rest[0] : rest[rest.length - 1];
+          next = next.filter(function (s) { return s !== drop; });
+        }
+        return next;
+      });
+    }
 
     function pick(step, id) { setPicked(function (now) { var next = Object.assign({}, now); next[step] = id; return next; }); }
 
@@ -1100,8 +1121,8 @@ details.part:not([open]) { gap: 0; }
     React.useEffect(function () {
       if (!props.arrive) return;
       // What was asked for is shown on its own, not beside the page the binder happens to open on.
-      if (props.arrive.part) { var step = props.arrive.step; if (step) { pick(step, props.arrive.doc); only(step); } setLit({ id: props.arrive.part, n: Date.now() }); }
-      else if (data.where[props.arrive.address]) { go(props.arrive.address, null); only(data.where[props.arrive.address].step); }
+      if (props.arrive.part) { var step = props.arrive.step; if (step) { pick(step, props.arrive.doc); land(step); } setLit({ id: props.arrive.part, n: Date.now() }); }
+      else if (data.where[props.arrive.address]) { go(props.arrive.address, null); land(data.where[props.arrive.address].step); }
     }, [props.arrive]);
 
     React.useEffect(function () {
@@ -1133,7 +1154,6 @@ details.part:not([open]) { gap: 0; }
         return;
       }
       // Selecting a statement, or a line of one, traces it. Controls, and text being selected to copy, are left alone.
-      if (Date.now() - swept.current < 400) return;
       var onPage = event.target.closest("[data-page]");
       if (onPage && !String(window.getSelection()) &&
           !event.target.closest("button, input, textarea, select, label, summary, [role=radio], [role=checkbox]")) {
@@ -1257,23 +1277,34 @@ details.part:not([open]) { gap: 0; }
     var toStandard = function (x) { return x ? { label: x.index + " " + x.heading, go: function () { props.openBinder(x.key); } } : null; };
     var walk = { prev: before.length ? toStop(before[before.length - 1]) : toStandard(standards[place - 1]),
       next: after.length ? toStop(after[0]) : toStandard(standards[place + 1]) };
+    // Side by side, the walk moves the window of pages along the binder instead, then on to the next standard.
+    if (props.layout === "split" && open.length > 1) {
+      var showing = STEPS.filter(function (s) { return open.indexOf(s) !== -1; });
+      var onward = stops.filter(function (s) { return STEPS.indexOf(s.step) > STEPS.indexOf(showing[showing.length - 1]); })[0];
+      var back = stops.filter(function (s) { return STEPS.indexOf(s.step) < STEPS.indexOf(showing[0]); }).pop();
+      var toPage = function (stop, end) {
+        return { label: lib.steps.filter(function (x) { return x.key === stop.step; })[0].label, go: function () { slide(stop.step, end); } };
+      };
+      walk = { prev: back ? toPage(back, "last") : toStandard(standards[place - 1]), next: onward ? toPage(onward, "first") : toStandard(standards[place + 1]) };
+    }
 
     // Every step keeps its spine, in order; an open step has its page straight after its spine.
     // One page, or pages side by side. The switch says which, and turning it on opens the next page beside this one.
-    var split = open.length > 1, canSplit = room() > 1;
+    var split = open.length > 1, canSplit = room() > 1, beside = split || props.layout === "split";
     var layout = h(Seg, { label: "Pages shown", value: split ? "split" : "one",
       options: [["one", "One page"], ["split", "Side by side", !canSplit && !split, canSplit || split ? undefined : "This window is too narrow for two pages"]],
       onChange: function (to) {
         if (size === "full") setSize("half");  // the book comes back into view to show what was asked for
+        props.setLayout(to);  // the choice lasts: the next document and the next standard open the same way
         if (to === "one") only(current);
-        else if (!split) show([STEPS[STEPS.indexOf(current) + 1] || STEPS[STEPS.indexOf(current) - 1]], current);
+        else { setActive(current); setOpen(function () { var want = [current]; STEPS.forEach(function (other) { if (want.length < room() && want.indexOf(other) === -1) want.push(other); }); return want; }); }
       } });
 
     var kids = [];
     STEPS.forEach(function (step, i) {
       var isOpen = open.indexOf(step) !== -1;
       kids.push(h(R.PageSpine, { key: "spine-" + step, number: i + 1, active: isOpen,
-        onClick: function () { if (size === "full") setSize("half"); if (isOpen || !split) only(step); else show([step], null); } }));
+        onClick: function () { if (size === "full") setSize("half"); if (isOpen || !beside) only(step); else show([step], null); } }));
       if (isOpen) kids.push(page(step));
     });
 
@@ -1285,7 +1316,7 @@ details.part:not([open]) { gap: 0; }
         "data-step": x.key, "aria-pressed": isOpen,
         onClick: function () {
           if (size === "full") { setSize("half"); only(x.key); return; }
-          if (!isOpen) { if (split) show([x.key], null); else only(x.key); }
+          if (!isOpen) { if (beside) show([x.key], null); else only(x.key); }
           else if (open.length > 1) setOpen(open.filter(function (y) { return y !== x.key; }));
         } }, h("span", { className: "pill-dot" }), x.label);
     });
@@ -1298,7 +1329,8 @@ details.part:not([open]) { gap: 0; }
       h(R.BreadcrumbItem, { index: data.crumbs[1].index, current: true, menu: h(R.DropdownMenuContent, { align: "start", className: "max-h-80 overflow-y-auto" },
         module.standards.map(function (x) { return h(R.DropdownMenuItem, { key: x.key, onSelect: function () { props.openBinder(x.key); } }, x.index + "  " + x.heading); })) }, data.crumbs[1].label));
 
-    // Highlighting words in a document selects exactly those words, as it does in the platform: the comment box opens on them.
+    // Highlighting words in a document offers a comment on exactly those words, as the platform does. Nothing opens until
+    // the offer is taken, so highlighting to copy is left in peace.
     function onSweep() {
       var chosen = window.getSelection();
       if (!chosen || chosen.isCollapsed || !chosen.rangeCount || String(chosen).trim().length < 2) return;
@@ -1315,10 +1347,30 @@ details.part:not([open]) { gap: 0; }
       upto.setEnd(range.endContainer, range.endOffset);
       var start = before.toString().length, end = Math.min(holder.textContent.length, upto.toString().length);  // words past the end of the statement are left out
       if (end <= start) return;
-      swept.current = Date.now();
-      chosen.removeAllRanges();  // the page's own highlight takes over from the browser's
-      startTrace(holder.id, onPage.dataset.page, null, null, [start, end]);
+      var at = range.getBoundingClientRect();  // the offer sits just under the end of the words, kept inside the window
+      setOffer({ id: holder.id, step: onPage.dataset.page, span: [start, end],
+        left: Math.max(8, Math.min(at.right - 60, window.innerWidth - 140)), top: at.bottom + 44 > window.innerHeight ? at.top - 40 : at.bottom + 8 });
     }
+    function takeOffer() {
+      window.getSelection().removeAllRanges();  // the page's own highlight takes over from the browser's
+      setGuide(true);
+      startTrace(offer.id, offer.step, null, null, offer.span);
+      setOffer(null);
+    }
+    // The offer goes when the highlight does, or when the page moves under it.
+    React.useEffect(function () {
+      if (!offer) return undefined;
+      function gone() { var chosen = window.getSelection(); if (!chosen || chosen.isCollapsed) setOffer(null); }
+      function moved() { setOffer(null); }
+      document.addEventListener("selectionchange", gone);
+      window.addEventListener("scroll", moved, true);
+      window.addEventListener("resize", moved);
+      return function () {
+        document.removeEventListener("selectionchange", gone);
+        window.removeEventListener("scroll", moved, true);
+        window.removeEventListener("resize", moved);
+      };
+    }, [offer]);
 
     return h("div", { className: "book", onClick: onClick, onMouseUp: onSweep, ref: book },
       h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, layout, pills,
@@ -1330,6 +1382,9 @@ details.part:not([open]) { gap: 0; }
           trace: trace, clearTrace: function () { setTrace(null); }, notes: props.notes, noteActs: props.noteActs,
           size: size, setSize: setSize, goNote: goNote,
           verdicts: props.verdicts, walk: walk, close: function () { setGuide(false); } }) : null),
+      offer ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "sweep-offer", style: { left: offer.left, top: offer.top },
+        onMouseDown: function (event) { event.preventDefault(); }, onMouseUp: function (event) { event.stopPropagation(); }, onClick: takeOffer },
+        h(R.Icon, { name: "comment" }), "Comment") : null,
       word ? h("aside", { className: "meaning", role: "status" },
         h("p", null, h("strong", null, word.term + ": "), word.meaning),
         h("p", { className: "quiet" }, "Defined once, in " + word.source + ", Words we use. Every page in the binder uses that one wording."),
@@ -1504,6 +1559,7 @@ details.part:not([open]) { gap: 0; }
     var a = React.useState(null), arrive = a[0], setArrive = a[1];
     var c = React.useState(false), colour = c[0], setColour = c[1];
     var m = React.useState("provider"), mode = m[0], setMode = m[1];  // who the page is guiding
+    var ly = React.useState("one"), layout = ly[0], setLayout = ly[1];  // the way of working chosen: one page at a time, or pages side by side
     var t = React.useState(false), tools = t[0], setTools = t[1];   // the extras for judging the design itself
     var vd = React.useState({}), verdicts = vd[0], setVerdicts = vd[1];
     var nt = React.useState({}), notes = nt[0], setNotes = nt[1];  // address -> threads, in the platform's own comment shape
@@ -1594,7 +1650,8 @@ details.part:not([open]) { gap: 0; }
       h("main", { className: "work" },
         view === "table" ? h(AllDocuments, { lib: lib, verdicts: verdicts, open: function (binder, id) { openAt(binder, { address: id }); } })
         : !data ? h("p", { className: "loading" }, "Opening the binder.")
-        : h(Book, { key: data.key, data: data, lib: lib, mode: mode, tools: tools, verdicts: verdicts, setVerdict: setVerdict, notes: notes, noteActs: noteActs,
+        : h(Book, { key: data.key, data: data, lib: lib, mode: mode, layout: layout, setLayout: setLayout, tools: tools, verdicts: verdicts, setVerdict: setVerdict,
+            notes: notes, noteActs: noteActs,
             arrive: arrive, leave: leave,
             openBinder: function (binder, address) { openAt(binder, address ? { address: address } : null); } })));
   }
