@@ -45,7 +45,6 @@
 .badges { display: inline-flex; flex-wrap: wrap; gap: var(--spacing-s2); }
 .off-note { max-width: 60rem; padding: var(--spacing-s3) var(--spacing-s4); border-left: 3px solid var(--warning-solid); background: var(--warning-subtle); font-size: max(0.875rem, 14px); line-height: 1.5; }
 .step-table { font-size: max(0.9375rem, 15px); overflow-x: auto; }
-.scopes { display: flex; flex-wrap: wrap; gap: var(--spacing-s2); margin-bottom: var(--spacing-s4); }
 .subs { list-style: none; display: grid; gap: var(--spacing-s2); padding-left: 0; margin-top: var(--spacing-s2); }
 .doc ol.subs { list-style: none; padding-left: 0; }
 .subs > li { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); }
@@ -55,18 +54,12 @@
 .binder-page { min-width: 0; }
 .binder-page.is-tight { padding: var(--spacing-s6) var(--spacing-s5); gap: var(--spacing-s5); }
 
-/* ---- one page: its controls, its sheet, and the index beside it when there is room.
- * The widths are the platform's own: a 48rem sheet, an s5 gap, a 24rem side panel. */
+/* ---- one page: its controls and its sheet, at the platform's own 48rem. */
 .pane-fit { display: flex; flex: 1; justify-content: center; min-width: 0; min-height: 0; width: 100%; container-type: inline-size; }
 .pane { display: flex; flex: 1; flex-direction: column; gap: var(--spacing-s5); min-width: 0; min-height: 0; max-width: var(--container-sheet); }
-.pane.has-side { max-width: calc(var(--container-sheet) + var(--spacing-s5) + var(--container-side-panel)); }
 .pane-controls { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s3); }
 .pane-row { display: flex; flex: 1; gap: var(--spacing-s5); min-height: 0; }
 .pane-sheet { min-width: 0; }
-.side { display: flex; flex: none; flex-direction: column; width: var(--container-side-panel); min-height: 0; }
-.side-tabs { display: flex; align-items: flex-end; }
-.side-tab { position: relative; display: flex; align-items: center; gap: var(--spacing-s2); margin-bottom: -1px; padding: var(--spacing-s1) var(--spacing-s2) var(--spacing-s1) var(--spacing-s4); border: 1px solid var(--border); border-bottom: 0; border-radius: var(--radius-md) var(--radius-md) 0 0; background: var(--card); font-size: 0.875rem; font-weight: 500; }
-.side-card { flex: 1; min-height: 0; overflow-y: auto; padding: var(--spacing-s4); border: 1px solid var(--border); border-radius: 0 var(--radius-lg) var(--radius-lg) var(--radius-lg); background: var(--card); }
 .ix-row { display: grid; grid-template-columns: 3.75rem minmax(0, 1fr); gap: var(--spacing-s3); align-items: baseline; padding: var(--spacing-s2) var(--spacing-s3); border-radius: var(--radius-sm); font-size: max(0.875rem, 14px); line-height: 1.45; color: var(--foreground); text-decoration: none; }
 .ix-row .ix { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--tab-soft-foreground); }
 .ix-row .ix-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -74,7 +67,7 @@
 .ix-row.depth-0:first-child { margin-top: 0; }
 .ix-row:hover { background: var(--muted); }
 .ix-row.is-here { background: var(--tab-soft); }
-.ix-group { padding: var(--spacing-s3) var(--spacing-s3) var(--spacing-s1); font-size: max(0.8125rem, 13px); color: var(--muted-foreground); }
+.ix-group { padding: var(--spacing-s3) var(--spacing-s3) var(--spacing-s1); font-size: max(0.875rem, 14px); color: var(--muted-foreground); }
 @container (max-width: 38rem) {
   .pane-sheet > div { padding: var(--spacing-s5); }
   .doc { --hang: 3.75rem; }
@@ -119,6 +112,45 @@ details.part:not([open]) { gap: 0; }
 .lines dt { font-size: 0.875em; color: var(--muted-foreground); }
 .lines dd { margin: 0; overflow-wrap: anywhere; }
 .trail, .quiet, .hint { font-size: 0.875em; color: var(--muted-foreground); }
+.rel::after { content: ". "; }
+.lk:not(:last-of-type)::after { content: ", "; }
+.lk-more { font-style: normal; }
+
+/* ---- two views of the same pages. Reading is what a worker opens: one page, parts named in
+ * words, only where a part leads, and none of the tools for judging the anatomy. Review is
+ * the whole of it: codes, both directions of every link, word counts and departures. */
+.is-worker .as-code, .is-auditor .as-name, .is-auditor .lk-more { display: none; }
+.is-worker .rel.arriving, .is-worker .trail:not(.leads), .is-worker .lk:nth-of-type(n+4) { display: none; }
+.is-worker .lk:nth-of-type(3):not(:last-of-type)::after { content: " "; }
+/* The extras for judging the design itself stay out of both views until Design tools is ticked. */
+.frame:not(.has-tools) details.part > summary .count { font-size: 0; }
+.frame:not(.has-tools) details.part > summary .count::after { font-size: max(0.875rem, 14px); }
+.frame:not(.has-tools) .off-note, .frame:not(.has-tools) .part > .quiet.plain { display: none; }
+
+/* ---- the guide: one list beside the book, in the same place in both views */
+.book-row { display: flex; flex: 1; gap: var(--spacing-s5); min-height: 0; position: relative; }
+.book-row > [data-slot="document-spread"] { flex: 1; min-width: 0; }
+.guide { display: flex; flex: none; flex-direction: column; width: 23rem; min-height: 0; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); font-size: max(0.9375rem, 15px); line-height: 1.4; }
+.guide-head { display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-s4) var(--spacing-s4) var(--spacing-s3) var(--spacing-s5); }
+.guide-head h2 { font-size: 1.125em; font-weight: 600; }
+.tally { display: flex; flex-wrap: wrap; gap: var(--spacing-s2); padding: 0 var(--spacing-s4) var(--spacing-s4); border-bottom: 1px solid var(--border); }
+.guide-list { flex: 0 1 auto; min-height: 0; max-height: 64%; overflow-y: auto; padding: var(--spacing-s3); display: grid; gap: var(--spacing-s3); align-content: start; }
+.guide-step { display: grid; gap: 1px; }
+.guide-row { display: flex; align-items: center; gap: var(--spacing-s3); padding: var(--spacing-s3); border-radius: var(--radius-sm); color: var(--foreground); text-decoration: none; }
+.guide-row:hover { background: var(--muted); }
+.guide-row.is-step.is-open { background: var(--tab-subtle); }
+.guide-row .spine { flex: none; display: inline-grid; place-items: center; width: 1.625rem; height: 1.625rem; border-radius: var(--radius-full); background: var(--tab-soft); color: var(--tab-soft-foreground); font-size: 0.8125em; font-weight: 600; }
+.guide-row.is-open .spine { background: var(--tab-solid); color: var(--tab-solid-foreground); }
+.guide-name { display: grid; gap: 0; flex: 1; min-width: 0; }
+.guide-what { font-size: max(0.875em, 14px); font-weight: 400; color: var(--muted-foreground); }
+.guide-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-s3); margin-top: var(--spacing-s1); }
+.guide-row.is-doc { padding-left: calc(var(--spacing-s3) + 1.625rem + var(--spacing-s3)); }
+.guide-row.is-current { background: var(--tab-soft); font-weight: 600; }
+.guide-page { flex: 1 1 0; min-height: 8rem; overflow-y: auto; padding: var(--spacing-s4) var(--spacing-s3) var(--spacing-s4); border-top: 1px solid var(--border); }
+.guide-over { padding: 0 var(--spacing-s3); font-size: 0.8125em; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); }
+.guide-title { padding: 0 var(--spacing-s3) var(--spacing-s3); font-weight: 600; }
+.guide-page > .guide-what { padding: 0 var(--spacing-s3); }
+@media (max-width: 71.99rem) { .guide { position: absolute; z-index: 20; top: 0; right: 0; bottom: 0; width: min(23rem, 92vw); } }
 .go { color: inherit; text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
 .trail .go { color: var(--foreground); }
 .term { font: inherit; font-weight: 600; color: inherit; padding: 0; border: 0; background: none; cursor: help; }
@@ -354,7 +386,7 @@ details.part:not([open]) { gap: 0; }
       })) : h("div", Object.assign({ className: "plain" }, html(F.signoff)))),
       h("div", { className: "actions" },
         h(R.Button, { variant: "primary", onClick: props.save }, "Save record"),
-        h(R.Button, { variant: "neutral", emphasis: "outline", onClick: function () { props.setAnswers(exampleAnswers(F, kind)); } }, "Fill with example answers")),
+        props.review ? h(R.Button, { variant: "neutral", emphasis: "outline", onClick: function () { props.setAnswers(exampleAnswers(F, kind)); } }, "Fill with example answers") : null),
       props.saved ? h("p", { className: "saved", role: "status" }, props.saved) : null,
       h(Part, { part: partNamed(F.parts, "After you submit") }, h("div", Object.assign({ className: "plain" }, html(F.after)))),
       F.extras.map(function (x) { return h(Part, { part: x.part, key: x.part.id }, h("div", Object.assign({ className: "plain" }, html(x.html)))); }),
@@ -405,72 +437,89 @@ details.part:not([open]) { gap: 0; }
       block("Control", G.control));
   }
 
-  // ---- one page's frame: controls, the sheet, and the index beside it
+  // ---- the guide beside the book, and one page's frame
 
-  function useWidth(ref) {
-    var s = React.useState(0);
-    React.useLayoutEffect(function () {
-      if (!ref.current || !window.ResizeObserver) return undefined;
-      var watch = new ResizeObserver(function (seen) { s[1](seen[0].contentRect.width); });
-      watch.observe(ref.current);
-      return function () { watch.disconnect(); };
-    }, []);
-    return s[0];
+  // The guide: always in the same place beside the book, in two parts that never push each other
+  // off the screen. Above, the five pages of the binder and the documents on each: a support
+  // worker reads what each page is for, an auditor reads the verdict on every document and can
+  // narrow the list to what still needs a look. Below, the index of the page being read.
+  var VERDICT = { conforms: ["Conforms", "success"], "non-conforming": ["Non-conforming", "destructive"] };
+  function verdictBadge(verdict) {
+    var known = VERDICT[verdict];
+    return h(R.Badge, { tone: known ? known[1] : "neutral", size: "sm", dot: !!known }, known ? known[0] : "Not checked");
   }
 
-  // The platform's own Contents menu, for a page too narrow to keep its index open.
-  function ContentsMenu(props) {
-    var lines = props.entries.filter(function (e) { return !e.group; });
-    if (lines.length < 2) return null;
-    return h(R.DropdownMenu, null,
-      h(R.DropdownMenuTrigger, { asChild: true },
-        h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm" },
-          h(R.Icon, { name: "document" }), "Contents", h(R.Icon, { name: "chevron-down" }))),
-      h(R.DropdownMenuContent, { align: "start", className: "max-h-80 overflow-y-auto", onCloseAutoFocus: function (e) { e.preventDefault(); } },
-        lines.map(function (e, i) {
-          return h(R.DropdownMenuItem, { key: i, depth: e.depth, onSelect: function () { props.pick(e); } }, (e.short ? e.short + "  " : "") + e.label);
+  function Guide(props) {
+    var f = React.useState("all"), filter = f[0], setFilter = f[1];
+    var auditor = props.mode === "auditor", lib = props.lib;
+    var judged = [];
+    lib.steps.forEach(function (step) { if (step.key !== "legislation") judged = judged.concat(props.docsOf(step.key)); });
+    var count = { conforms: 0, "non-conforming": 0, none: 0 };
+    judged.forEach(function (doc) { count[props.verdicts[doc.id] || "none"] += 1; });
+    var tally = [["all", "All", judged.length], ["conforms", "Conform", count.conforms], ["non-conforming", "Do not conform", count["non-conforming"]], ["none", "Not checked", count.none]];
+    var narrowed = auditor && filter !== "all";
+    var reading = lib.steps.filter(function (step) { return step.key === props.current; })[0];
+    var doc = props.docsOf(props.current).filter(function (d) { return d.id === props.picked[props.current]; })[0];
+    var entries = doc ? props.entriesFor(doc) : [];
+    var at = props.here[props.current] || "", index = React.useRef(null);
+
+    // Keep the part being read in sight in the index, moving only the index's own scroller.
+    React.useEffect(function () {
+      var box = index.current, row = box && box.querySelector(".is-here");
+      if (!row) return;
+      var top = row.getBoundingClientRect().top - box.getBoundingClientRect().top, room = box.clientHeight - row.offsetHeight;
+      if (top < 0 || top > room) box.scrollTop += top - room / 2;
+    }, [at, props.current]);
+
+    return h("aside", { className: "guide", "aria-label": auditor ? "Audit of this binder" : "Guide to this binder" },
+      h("div", { className: "guide-head" }, h("h2", null, auditor ? "Audit" : "Guide"),
+        h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", "aria-label": "Close the guide", onClick: props.close }, h(R.Icon, { name: "close" }))),
+      auditor ? h("div", { className: "tally" }, tally.map(function (x) {
+        return h(R.Button, { key: x[0], type: "button", variant: "tab", size: "sm", emphasis: filter === x[0] ? "solid" : "soft", "aria-pressed": filter === x[0],
+          onClick: function () { setFilter(x[0]); } }, x[1] + " " + x[2]);
+      })) : null,
+      h("nav", { className: "guide-list", "aria-label": "Pages of this binder" }, lib.steps.map(function (step, i) {
+        var law = step.key === "legislation";
+        var list = law ? [] : props.docsOf(step.key).filter(function (d) { return !narrowed || (props.verdicts[d.id] || "none") === filter; });
+        if (narrowed && !list.length) return null;
+        var isOpen = props.open.indexOf(step.key) !== -1;
+        return h("div", { className: "guide-step", key: step.key },
+          h("a", { href: "#", className: "guide-row is-step" + (isOpen ? " is-open" : "") + (law && props.current === step.key ? " is-current" : ""),
+            "data-open": step.key + "|" + (props.picked[step.key] || "") },
+            h("span", { className: "spine" }, i + 1),
+            h("span", { className: "guide-name" }, h("strong", null, step.label), auditor ? null : h("span", { className: "guide-what" }, step.what))),
+          list.map(function (d) {
+            var current = props.current === step.key && props.picked[step.key] === d.id;
+            return h("a", { key: d.id, href: "#", className: "guide-row is-doc" + (current ? " is-current" : ""), "data-open": step.key + "|" + d.id },
+              h("span", { className: "guide-name" }, h("span", null, d.title),
+                auditor ? h("span", { className: "guide-meta" }, h("span", { className: "guide-what" }, d.id), verdictBadge(props.verdicts[d.id])) : null));
+          }));
+      })),
+      h("nav", { className: "guide-page", "aria-label": "On this page", ref: index },
+        h("p", { className: "guide-over" }, "On this page"),
+        h("p", { className: "guide-title" }, doc ? doc.title : reading.label),
+        doc ? null : h("p", { className: "guide-what" }, "Choose a document from the list on the page."),
+        entries.map(function (e, n) {
+          if (e.group) return h("p", { className: "ix-group", key: n }, e.label);
+          var does = e.go ? { "data-go": e.go } : { "data-jump": e.id };
+          return h("a", Object.assign({ key: n, href: "#", className: "ix-row depth-" + e.depth + (at === e.id ? " is-here" : "") }, does),
+            h("span", { className: "ix" }, e.short), h("span", { className: "ix-label" }, e.label));
         })));
   }
 
-  var SCOPES = [["page", "This page"], ["binder", "This binder"], ["all", "All standards"]];
-
-  // The index, at three depths. A row carries what selecting it does: jump within the page,
-  // follow an address, open a page or a document of this binder, or open another binder.
-  function IndexPanel(props) {
-    var rows = props.scope === "page" ? props.entries : props.scope === "binder" ? props.binderRows : props.libraryRows;
-    return h("aside", { className: "side", "aria-label": "Document side panel" },
-      h("div", { className: "side-tabs" }, h("div", { className: "side-tab" }, h("span", null, "Index"),
-        h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", "aria-label": "Close index", onClick: props.close }, h(R.Icon, { name: "close" })))),
-      h("nav", { className: "side-card", "aria-label": "Index" },
-        h("div", { className: "scopes" }, SCOPES.map(function (s) {
-          return h(R.Button, { key: s[0], type: "button", variant: "tab", size: "sm", emphasis: props.scope === s[0] ? "solid" : "soft",
-            onClick: function () { props.setScope(s[0]); } }, s[1]);
-        })),
-        rows.length ? rows.map(function (e, i) {
-          if (e.group) return h("p", { className: "ix-group", key: i }, e.label);
-          var does = e.binder ? { "data-binder": e.binder } : e.open ? { "data-open": e.open } : e.go ? { "data-go": e.go } : { "data-jump": e.id };
-          var here = props.scope === "page" ? props.here === e.id : e.here;
-          return h("a", Object.assign({ key: i, href: "#", className: "ix-row depth-" + e.depth + (here ? " is-here" : "") }, does),
-            h("span", { className: "ix" }, e.short), h("span", { className: "ix-label" }, e.label));
-        }) : h("p", { className: "quiet" }, "Open a document on this page to see its parts.")));
-  }
-
+  // One page's frame: its controls and its sheet. It reports the part being read, so the guide can mark it.
   function Pane(props) {
-    var fit = React.useRef(null), width = useWidth(fit);
-    var roomy = width >= rem() * 73;  // a 48rem sheet, the gap, and a 24rem panel
-    var w = React.useState(true), wanted = w[0], setWanted = w[1];
-    var a = React.useState(null), here = a[0], setHere = a[1];
-    var sc = React.useState("page"), scope = sc[0], setScope = sc[1];
-    var entries = React.useRef(props.entries);
+    var fit = React.useRef(null), entries = React.useRef(props.entries), tell = React.useRef(props.onHere);
     entries.current = props.entries;
+    tell.current = props.onHere;
     var scroller = function () { return fit.current && fit.current.querySelector('[data-slot="document-sheet"] > div'); };
 
-    // Mark the part being read: the last index entry whose part has reached the top of the sheet.
+    // The part being read is the last one whose top has reached the top of the sheet.
     React.useEffect(function () {
       var box = scroller();
       if (!box) return undefined;
       var waiting = false;
-      function measure() {
+      function measure(moved) {
         waiting = false;
         var line = box.getBoundingClientRect().top + 120, found = null;
         entries.current.forEach(function (e) {
@@ -478,45 +527,35 @@ details.part:not([open]) { gap: 0; }
           var part = document.getElementById(e.id);
           if (part && part.getBoundingClientRect().top <= line) found = e.id;
         });
-        setHere(found);
+        tell.current(found, moved === true);
       }
-      function onScroll() { if (!waiting) { waiting = true; window.requestAnimationFrame(measure); } }
+      function onScroll() { if (!waiting) { waiting = true; window.requestAnimationFrame(function () { measure(true); }); } }
       box.addEventListener("scroll", onScroll, { passive: true });
-      measure();
+      measure(false);
       return function () { box.removeEventListener("scroll", onScroll); };
     }, [props.step, props.docId]);
 
-    // Keep the marked entry in sight inside the panel, without moving anything else.
-    React.useEffect(function () {
-      var card = fit.current && fit.current.querySelector(".side-card"), row = card && card.querySelector(".is-here");
-      if (!row) return;
-      var c = card.getBoundingClientRect(), r = row.getBoundingClientRect();
-      if (r.top < c.top || r.bottom > c.bottom) card.scrollTop += r.top - c.top - card.clientHeight / 3;
-    }, [here, scope]);
-
-    var side = roomy && wanted;
     return h("div", { className: "pane-fit", ref: fit },
-      h("div", { className: "pane" + (side ? " has-side" : "") },
+      h("div", { className: "pane" },
         h("div", { className: "pane-controls" },
-          roomy ? h(R.Button, { type: "button", variant: "neutral", emphasis: wanted ? "soft" : "outline", size: "sm", "aria-pressed": wanted,
-                    onClick: function () { setWanted(!wanted); } }, h(R.Icon, { name: "list" }), "Index")
-                : h(ContentsMenu, { entries: props.entries, pick: props.pick }),
           h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm",
             onClick: function () { var box = scroller(); if (box) box.scrollTo({ top: 0, behavior: calm ? "auto" : "smooth" }); } },
             h(R.Icon, { name: "arrow-up" }), "Top"),
           props.more),
-        h("div", { className: "pane-row" },
-          h(R.DocumentSheet, { className: "pane-sheet" }, props.children),
-          side ? h(IndexPanel, { entries: props.entries, binderRows: props.binderRows, libraryRows: props.libraryRows,
-                                 scope: scope, setScope: setScope, here: here, close: function () { setWanted(false); } }) : null)));
+        h("div", { className: "pane-row" }, h(R.DocumentSheet, { className: "pane-sheet" }, props.children))));
   }
 
   // ---- the book: one binder
 
   // How many pages the window can hold side by side: each needs about 40rem beside the spines.
-  function capacity(steps) {
-    return Math.max(1, Math.min(steps, Math.floor((window.innerWidth - rem() * 4 - steps * 24) / (rem() * 40))));
+  // How many pages fit beside the spines and the guide. A support worker is shown one page, and a
+  // second only when a link asks for it.
+  function capacity(steps, mode, guide) {
+    var fit = Math.max(1, Math.min(steps, Math.floor((window.innerWidth - rem() * (guide ? 28 : 4) - steps * 24) / (rem() * 40))));
+    return mode === "worker" ? Math.min(2, fit) : fit;
   }
+  // The same line the stylesheet draws: below it the guide is a drawer over the book, not a column beside it.
+  var wide = function () { return window.matchMedia("(min-width: 72rem)").matches; };
 
   function Book(props) {
     var data = props.data, lib = props.lib;
@@ -525,7 +564,14 @@ details.part:not([open]) { gap: 0; }
     var docOf = function (step, id) { return docsOf(step).filter(function (d) { return d.id === id; })[0]; };
     var forms = docsOf("forms").filter(function (d) { return d.kind === "form"; }), registers = docsOf("registers");
 
-    var o = React.useState(function () { return STEPS.slice(0, capacity(STEPS.length)); }), open = o[0], setOpen = o[1];  // oldest first
+    var g = React.useState(wide), guide = g[0], setGuide = g[1];
+    var hr = React.useState({}), here = hr[0], setHere = hr[1];        // the part being read, per page
+    var ac = React.useState(null), active = ac[0], setActive = ac[1];  // the page last opened, followed to or scrolled
+    var mode = React.useRef(props.mode), guided = React.useRef(guide), started = React.useRef(false);
+    mode.current = props.mode;
+    guided.current = guide && wide();
+    var room = function () { return capacity(STEPS.length, mode.current, guided.current); };
+    var o = React.useState(function () { return STEPS.slice(0, props.mode === "worker" ? 1 : Math.min(2, room())); }), open = o[0], setOpen = o[1];  // oldest first
     var p = React.useState(function () {
       var first = {};
       STEPS.forEach(function (step) { first[step] = docsOf(step).length === 1 && !data.steps[step].unread.length ? docsOf(step)[0].id : ""; });
@@ -551,23 +597,37 @@ details.part:not([open]) { gap: 0; }
 
     // A narrower window holds fewer pages: the ones opened longest ago close first.
     React.useEffect(function () {
-      function fit() { setOpen(function (now) { var room = capacity(STEPS.length); return now.length > room ? now.slice(-room) : now; }); }
+      function fit() { setOpen(function (now) { return now.length > room() ? now.slice(-room()) : now; }); }
       window.addEventListener("resize", fit);
       return function () { window.removeEventListener("resize", fit); };
     }, []);
 
+    // Changing view: a support worker keeps the page last opened; an auditor gets a second beside it.
+    React.useEffect(function () {
+      if (!started.current) { started.current = true; return; }
+      setOpen(function (now) {
+        if (props.mode === "worker") return [now[now.length - 1]];
+        var next = now.slice();
+        STEPS.forEach(function (step) { if (next.length < Math.min(2, room()) && next.indexOf(step) === -1) next.push(step); });
+        return next;
+      });
+    }, [props.mode]);
+
     // Open pages, keeping `kept` on screen: when the window is full, the page opened longest ago makes room.
     function show(steps, kept) {
+      setActive(steps[steps.length - 1]);
       setOpen(function (now) {
-        var next = now.slice(), room = capacity(STEPS.length);
+        var next = now.slice();
         steps.forEach(function (step) { if (next.indexOf(step) === -1) next.push(step); });
-        while (next.length > room) {
+        while (next.length > room()) {
           var drop = next.findIndex(function (x) { return steps.indexOf(x) === -1 && x !== kept; });
           next.splice(drop === -1 ? 0 : drop, 1);
         }
         return next;
       });
     }
+
+    function only(step) { setActive(step); setOpen([step]); }
 
     function pick(step, id) { setPicked(function (now) { var next = Object.assign({}, now); next[step] = id; return next; }); }
 
@@ -619,10 +679,16 @@ details.part:not([open]) { gap: 0; }
       var link = event.target.closest("[data-go], [data-jump], [data-open], [data-binder]");
       if (link) {
         event.preventDefault();
+        if (link.closest(".guide") && !wide()) setGuide(false);  // as a drawer it gets out of the way of what was chosen
         if (link.dataset.binder) { props.openBinder(link.dataset.binder); return; }
-        if (link.dataset.open) { var to = link.dataset.open.split("|"); pick(to[0], to[1] || ""); show([to[0]], null); return; }
+        if (link.dataset.open) {
+          var to = link.dataset.open.split("|");
+          pick(to[0], to[1] || "");
+          if (props.mode === "worker" && open.indexOf(to[0]) === -1) only(to[0]); else show([to[0]], null);
+          return;
+        }
         if (link.dataset.jump) { setLit({ id: link.dataset.jump, n: Date.now() }); return; }
-        var page = link.closest("[data-page]");
+        var page = link.closest("[data-page]") || (link.closest(".guide-page") ? { dataset: { page: current } } : null);
         go(link.dataset.go, page ? page.dataset.page : null);
         return;
       }
@@ -662,24 +728,6 @@ details.part:not([open]) { gap: 0; }
       return list;
     }
 
-    // The same index one level up: the five pages of this binder and the documents on each.
-    var binderRows = [];
-    lib.steps.forEach(function (step, i) {
-      binderRows.push({ short: String(i + 1), label: step.label, depth: 0, open: step.key + "|", here: false });
-      docsOf(step.key).forEach(function (doc) {
-        binderRows.push({ short: step.key === "legislation" ? "" : doc.id.slice(0, 3), label: step.key === "legislation" ? doc.title : doc.id + "  " + doc.title,
-          depth: 1, open: step.key + "|" + doc.id, here: picked[step.key] === doc.id && open.indexOf(step.key) !== -1 });
-      });
-    });
-    // And two levels up: every standard that has a binder, under its module.
-    var libraryRows = [];
-    lib.modules.forEach(function (module) {
-      libraryRows.push({ group: true, label: (module.no ? "Module " + module.no + ": " : "") + module.name });
-      module.standards.forEach(function (standard) {
-        libraryRows.push({ short: standard.index, label: standard.heading, depth: 1, binder: standard.key, here: standard.key === data.key });
-      });
-    });
-
     // The documents on one page of the binder, as the platform lists them: one row each.
     function stepTable(step) {
       var label = lib.steps.filter(function (x) { return x.key === step; })[0].label.toLowerCase();
@@ -699,7 +747,8 @@ details.part:not([open]) { gap: 0; }
     function body(step, doc) {
       if (!doc) return stepTable(step);
       if (doc.kind === "form") return h(FormPage, { doc: doc, kind: kindOf(doc), setKind: function (v) { keep(setKinds, kinds, doc.id, v); },
-        answers: answers[doc.id] || {}, setAnswers: function (v) { keep(setAnswers, answers, doc.id, v); }, save: function () { save(doc); }, saved: saved[doc.id] });
+        answers: answers[doc.id] || {}, setAnswers: function (v) { keep(setAnswers, answers, doc.id, v); }, save: function () { save(doc); }, saved: saved[doc.id],
+        review: props.tools });
       if (doc.kind === "register") return h(RegisterPage, { doc: doc, rows: rows[doc.id] || [], sheet: sheets[doc.id] || 0,
         setSheet: function (v) { keep(setSheets, sheets, doc.id, v); }, column: columns[doc.id] || null, setColumn: function (v) { keep(setColumns, columns, doc.id, v); } });
       return h("div", Object.assign({ className: "doc" }, html(doc.html)));
@@ -713,28 +762,38 @@ details.part:not([open]) { gap: 0; }
       return h(R.DocumentPage, { key: "page-" + step, id: "top-" + step, bare: true, titleClassName: "text-h2",
         title: doc ? doc.title : label, subtitle: doc ? doc.subtitle : all + (all === 1 ? " document" : " documents") + " for this standard at 0.3.0",
         statusSlot: doc && doc.off ? h("p", { className: "off-note" }, doc.off) : null,
+        action: props.mode === "auditor" && doc && step !== "legislation"
+          ? h(R.ConformanceControl, { value: props.verdicts[doc.id] || "", onValueChange: function (value) { props.setVerdict(doc.id, value); } }) : null,
         basis: open.length > 1 ? 100 / open.length : null, className: "binder-page" + (open.length > 2 ? " is-tight" : ""),
         "data-page": step, "data-step": step },
-        h(Pane, { step: step, docId: doc ? doc.id : "", entries: entriesFor(doc), binderRows: binderRows, libraryRows: libraryRows, more: more,
-          pick: function (e) { if (e.go) go(e.go, step); else setLit({ id: e.id, n: Date.now() }); } }, body(step, doc)));
+        h(Pane, { step: step, docId: doc ? doc.id : "", entries: entriesFor(doc), more: more,
+          onHere: function (id, moved) {
+            if (moved) setActive(step);
+            setHere(function (now) { if (now[step] === id) return now; var next = Object.assign({}, now); next[step] = id; return next; });
+          } },
+          body(step, doc)));
     }
+
+    // The page the guide indexes: the one last opened, followed to or scrolled, while it is still open.
+    var current = open.indexOf(active) !== -1 ? active : open[open.length - 1];
 
     // Every step keeps its spine, in order; an open step has its page straight after its spine.
     var kids = [];
     STEPS.forEach(function (step, i) {
       var isOpen = open.indexOf(step) !== -1;
       kids.push(h(R.PageSpine, { key: "spine-" + step, number: i + 1, active: isOpen,
-        onClick: function () { if (isOpen) setOpen([step]); else show([step], null); } }));
+        onClick: function () { if (isOpen || props.mode === "worker") only(step); else show([step], null); } }));
       if (isOpen) kids.push(page(step));
     });
 
-    // A pill opens its page beside the others, or closes it. One page always stays open.
+    // A pill opens its page: in place of the one showing when reading, beside the others when reviewing.
+    // Pressed on an open page it closes it. One page always stays open.
     var pills = lib.steps.map(function (x) {
       var isOpen = open.indexOf(x.key) !== -1;
       return h(R.Button, { key: x.key, variant: "tab", size: "md", emphasis: isOpen ? "solid" : "soft", className: "font-normal",
         "data-step": x.key, "aria-pressed": isOpen,
         onClick: function () {
-          if (!isOpen) show([x.key], null);
+          if (!isOpen) { if (props.mode === "worker") only(x.key); else show([x.key], null); }
           else if (open.length > 1) setOpen(open.filter(function (y) { return y !== x.key; }));
         } }, h("span", { className: "pill-dot" }), x.label);
     });
@@ -748,8 +807,13 @@ details.part:not([open]) { gap: 0; }
         module.standards.map(function (x) { return h(R.DropdownMenuItem, { key: x.key, onSelect: function () { props.openBinder(x.key); } }, x.index + "  " + x.heading); })) }, data.crumbs[1].label));
 
     return h("div", { className: "book", onClick: onClick },
-      h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, pills)),
-      h(R.DocumentSpread, { className: "relative" }, kids),
+      h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, pills,
+        guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
+          h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
+      h("div", { className: "book-row" },
+        h(R.DocumentSpread, { className: "relative" }, kids),
+        guide ? h(Guide, { mode: props.mode, lib: lib, docsOf: docsOf, entriesFor: entriesFor, open: open, picked: picked, here: here, current: current,
+          verdicts: props.verdicts, close: function () { setGuide(false); } }) : null),
       word ? h("aside", { className: "meaning", role: "status" },
         h("p", null, h("strong", null, word.term + ": "), word.meaning),
         h("p", { className: "quiet" }, "Defined once, in " + word.source + ", Words we use. Every page in the binder uses that one wording."),
@@ -769,6 +833,7 @@ details.part:not([open]) { gap: 0; }
         return { id: id, cells: { doc: id, title: doc.title, page: step[doc.step], standard: home.index + "  " + home.heading,
           also: doc.binders.length > 1 ? "and " + (doc.binders.length - 1) + " more" : "",
           words: doc.words == null ? "" : doc.words.toLocaleString(),
+          verdict: verdictBadge(props.verdicts[id]),
           status: h("span", { className: "badges" }, h(R.Badge, { tone: doc.problem ? "warning" : "neutral", size: "sm" }, doc.status), doc.off ? h(R.Badge, { tone: "warning", size: "sm", title: doc.off }, "Outside the anatomy") : null),
           open: doc.problem ? h("span", { className: "quiet" }, doc.problem)
             : h(R.Button, { variant: "neutral", emphasis: "link", size: "sm", onClick: function () { props.open(doc.home, id); } }, "View document") } };
@@ -776,7 +841,8 @@ details.part:not([open]) { gap: 0; }
     });
     return h("div", { className: "all-docs" }, h(R.DataTable, { caption: "Every document in the library",
       columns: [{ key: "doc", header: "Document" }, { key: "title", header: "Title" }, { key: "page", header: "Page" }, { key: "standard", header: "Standard" },
-                { key: "also", header: "Also in" }, { key: "words", header: "Words", align: "right" }, { key: "status", header: "Status" }, { key: "open", header: "" }],
+                { key: "also", header: "Also in" }, { key: "words", header: "Words", align: "right" }, { key: "status", header: "Status" },
+                { key: "verdict", header: "Verdict" }, { key: "open", header: "" }],
       groups: groups }));
   }
 
@@ -915,6 +981,11 @@ details.part:not([open]) { gap: 0; }
     var v = React.useState("binder"), view = v[0], setView = v[1];
     var a = React.useState(null), arrive = a[0], setArrive = a[1];
     var c = React.useState(false), colour = c[0], setColour = c[1];
+    var m = React.useState("worker"), mode = m[0], setMode = m[1];  // who the page is guiding
+    var t = React.useState(false), tools = t[0], setTools = t[1];   // the extras for judging the design itself
+    var vd = React.useState({}), verdicts = vd[0], setVerdicts = vd[1];
+    var auditor = mode === "auditor";
+    var setVerdict = function (id, value) { setVerdicts(function (now) { var next = Object.assign({}, now); next[id] = value; return next; }); };
 
     React.useEffect(function () {
       read("library").then(function (found) {
@@ -947,26 +1018,33 @@ details.part:not([open]) { gap: 0; }
 
     if (failed) return h("p", { className: "loading" }, "The library could not be read: " + failed + ". Reload the page to try again.");
     if (!lib) return h("p", { className: "loading" }, "Loading the library.");
-    return h("div", { className: "frame" + (colour ? " colour-on" : "") },
+    return h("div", { className: "frame is-" + mode + (tools ? " has-tools" : "") + (colour && tools ? " colour-on" : "") },
       h("header", { className: "bar" },
         h(R.RiseWordmark, { className: "mark" }),
         h("div", { className: "bar-tools" },
           h("div", { className: "views" },
+            h(R.Button, { variant: "tab", size: "sm", emphasis: !auditor ? "solid" : "soft", "aria-pressed": !auditor, onClick: function () { setMode("worker"); setView("binder"); } }, "Support worker"),
+            h(R.Button, { variant: "tab", size: "sm", emphasis: auditor ? "solid" : "soft", "aria-pressed": auditor, onClick: function () { setMode("auditor"); } }, "Auditor")),
+          auditor ? h("div", { className: "views" },
             h(R.Button, { variant: "tab", size: "sm", emphasis: view === "binder" ? "solid" : "soft", "aria-pressed": view === "binder", onClick: function () { setView("binder"); } }, "Binder"),
-            h(R.Button, { variant: "tab", size: "sm", emphasis: view === "table" ? "solid" : "soft", "aria-pressed": view === "table", onClick: function () { setView("table"); } }, "All documents")),
+            h(R.Button, { variant: "tab", size: "sm", emphasis: view === "table" ? "solid" : "soft", "aria-pressed": view === "table", onClick: function () { setView("table"); } }, "All documents")) : null,
           h(Search, { here: key, steps: lib.steps, open: function (row) {
             var doc = row.a.split(" ").slice(0, row.a.charAt(0) === "s" ? 2 : 1).join(" ");
             var stay = data && (data.where[row.a] || data.where[doc]);
             openAt(stay ? key : row.k, row.p ? { part: row.p, step: lib.docs[doc] ? lib.docs[doc].step : "legislation", doc: doc } : { address: row.a });
           } }),
           h("div", { className: "switch" },
+            h(R.Checkbox, { id: "tools", checked: tools, onCheckedChange: function (on) { setTools(!!on); } }),
+            h(R.Label, { htmlFor: "tools" }, "Design tools")),
+          tools ? h("div", { className: "switch" },
             h(R.Checkbox, { id: "colour", checked: colour, onCheckedChange: function (on) { setColour(!!on); } }),
-            h(R.Label, { htmlFor: "colour" }, "Colour by page")),
-          h("a", { href: "anatomy.html" }, "Anatomy and open rulings"))),
+            h(R.Label, { htmlFor: "colour" }, "Colour by page")) : null,
+          tools ? h("a", { href: "anatomy.html" }, "Anatomy and open rulings") : null)),
       h("main", { className: "work" },
-        view === "table" ? h(AllDocuments, { lib: lib, open: function (binder, id) { openAt(binder, { address: id }); } })
+        view === "table" ? h(AllDocuments, { lib: lib, verdicts: verdicts, open: function (binder, id) { openAt(binder, { address: id }); } })
         : !data ? h("p", { className: "loading" }, "Opening the binder.")
-        : h(Book, { key: data.key, data: data, lib: lib, arrive: arrive, leave: leave, openBinder: function (binder) { openAt(binder, null); } })));
+        : h(Book, { key: data.key, data: data, lib: lib, mode: mode, tools: tools, verdicts: verdicts, setVerdict: setVerdict, arrive: arrive, leave: leave,
+            openBinder: function (binder) { openAt(binder, null); } })));
   }
 
   ReactDOM.createRoot(document.getElementById("root")).render(h(R.Router, null, h(App)));
