@@ -177,6 +177,12 @@ details.part:not([open]) { gap: 0; }
 .trace-name { display: flex; align-items: center; gap: var(--spacing-s3); padding: 0 var(--spacing-s3) var(--spacing-s2); }
 .trace-name .spine { flex: none; display: inline-grid; place-items: center; width: 1.625rem; height: 1.625rem; border-radius: var(--radius-full); background: var(--tab-soft); color: var(--tab-soft-foreground); font-size: 0.8125em; font-weight: 600; }
 .trace-none { margin: 0 var(--spacing-s3); padding: var(--spacing-s2) var(--spacing-s3); border-left: 3px solid var(--warning-solid); background: var(--warning-subtle); font-size: max(0.875em, 14px); }
+.notes { display: grid; gap: var(--spacing-s3); padding: var(--spacing-s3) var(--spacing-s3) 0; }
+.notes > .trace-name { padding: 0; }
+.trace-where { padding-top: var(--spacing-s5); }
+/* a statement with an open comment carries a small bubble with the count, in the margin under its address */
+.doc .item[data-notes] { position: relative; }
+.doc .item[data-notes]::after { content: attr(data-notes); position: absolute; left: 0; top: calc(var(--spacing-s5) + 2em); min-width: 1.75rem; padding: 0 var(--spacing-s2); border: 1px solid var(--info-subtle-foreground); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0; background: var(--info-subtle); color: var(--info-subtle-foreground); font-size: 14px; font-weight: 600; line-height: 1.5; text-align: center; }
 .guide.has-trace .guide-list { max-height: 30%; }  /* a selected statement gets most of the guide */
 .trace-quiet { padding: 0 var(--spacing-s3); font-size: max(0.875em, 14px); color: var(--muted-foreground); }
 .ix-row.trace-other { grid-template-columns: minmax(0, 1fr); margin-top: 0; font-weight: 400; text-decoration: underline; text-underline-offset: 0.2em; }
@@ -497,6 +503,14 @@ details.part:not([open]) { gap: 0; }
     var entries = doc ? props.entriesFor(doc) : [];
     var at = props.here[props.current] || "", index = React.useRef(null);
     var trace = props.trace, sh = React.useState({}), shown = sh[0], setShown = sh[1];
+    var rp = React.useState(null), replying = rp[0], setReplying = rp[1];
+    var dr = React.useState(0), draft = dr[0], setDraft = dr[1];  // a new number gives the composer a clean start
+    var threads = trace ? props.notes[trace.address] || [] : [];
+    var openNotes = function (prefix) {
+      return Object.keys(props.notes).reduce(function (sum, address) {
+        return sum + (address.indexOf(prefix + " ") === 0 ? props.notes[address].filter(function (t) { return !t.resolved; }).length : 0);
+      }, 0);
+    };
     React.useEffect(function () { setShown({}); if (index.current) index.current.scrollTop = 0; }, [trace && trace.n]);
 
     // Keep the part being read in sight in the index, moving only the index's own scroller.
@@ -532,17 +546,31 @@ details.part:not([open]) { gap: 0; }
             h("span", { className: "spine" }, i + 1),
             h("span", { className: "guide-name" }, h("strong", null, step.label), auditor ? null : h("span", { className: "guide-what" }, step.what))),
           list.map(function (d) {
-            var current = props.current === step.key && props.picked[step.key] === d.id;
+            var current = props.current === step.key && props.picked[step.key] === d.id, said = openNotes(d.id);
             return h("a", { key: d.id, href: "#", className: "guide-row is-doc" + (current ? " is-current" : ""), "data-open": step.key + "|" + d.id },
               h("span", { className: "guide-name" }, h("span", null, d.title),
-                auditor ? h("span", { className: "guide-meta" }, h("span", { className: "guide-what" }, d.id), verdictBadge(props.verdicts[d.id])) : null));
+                auditor || said ? h("span", { className: "guide-meta" }, h("span", { className: "guide-what" }, auditor ? d.id : ""),
+                  h("span", { className: "badges" }, said ? h(R.Badge, { tone: "info", size: "sm" }, said + (said === 1 ? " comment" : " comments")) : null,
+                    auditor ? verdictBadge(props.verdicts[d.id]) : null)) : null));
           }));
       })),
       trace ? h("nav", { className: "guide-page", "aria-label": "Where this appears", ref: index },
-        h("div", { className: "trace-head" }, h("p", { className: "guide-over" }, "Where this appears"),
+        h("div", { className: "trace-head" }, h("p", { className: "guide-over" }, "Selected statement"),
           h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: props.clearTrace }, "Page index")),
         h("p", { className: "guide-title" }, trace.cite),
         trace.label ? h("p", { className: "guide-what trace-said" }, trace.label) : null,
+        h("div", { className: "notes" },
+          h("p", { className: "trace-name" }, h("strong", null, "Comments")),
+          threads.map(function (t) {
+            return h(React.Fragment, { key: t.id },
+              h(R.CommentCard, { comment: t, onReply: function (id) { setReplying(id); }, onResolve: function (id) { props.noteActs.resolve(trace.address, id); },
+                onDelete: function (id) { props.noteActs.remove(trace.address, id); } }),
+              replying === t.id ? h(R.CommentComposer, { className: "w-full", submitLabel: "Reply", placeholder: "Write a reply",
+                onSubmit: function (text) { props.noteActs.add(trace.address, text, t.id); setReplying(null); }, onCancel: function () { setReplying(null); } }) : null);
+          }),
+          h(R.CommentComposer, { key: trace.id + draft, className: "w-full", autoFocus: false, submitLabel: "Comment", placeholder: "Comment on this statement",
+            onSubmit: function (text) { props.noteActs.add(trace.address, text); setDraft(draft + 1); }, onCancel: function () { setDraft(draft + 1); } })),
+        h("p", { className: "trace-name trace-where" }, h("strong", null, "Where it appears")),
         trace.hits.length ? null : h("p", { className: trace.elsewhere.length ? "trace-quiet" : "trace-none" },
           trace.elsewhere.length ? "This statement is not part of this standard." : "This statement is not linked to anything in the library."),
         !trace.hits.length ? null : lib.steps.map(function (step, i) {
@@ -571,7 +599,7 @@ details.part:not([open]) { gap: 0; }
         h("p", { className: "guide-over" }, "On this page"),
         h("p", { className: "guide-title" }, doc ? doc.title : reading.label),
         doc ? null : h("p", { className: "guide-what" }, "Choose a document from the list on the page."),
-        doc ? h("p", { className: "guide-what trace-hint" }, "Select any numbered statement to see where it appears in the other documents.") : null,
+        doc ? h("p", { className: "guide-what trace-hint" }, "Select any numbered statement to comment on it and see where it appears in the other documents.") : null,
         entries.map(function (e, n) {
           if (e.group) return h("p", { className: "ix-group", key: n }, e.label);
           var does = e.go ? { "data-go": e.go } : { "data-jump": e.id };
@@ -813,7 +841,16 @@ details.part:not([open]) { gap: 0; }
     // Mark the traced statement and its places on whatever pages are showing, after every draw.
     React.useEffect(function () {
       if (!book.current) return;
-      var want = {};
+      var want = {}, open = {};
+      Object.keys(props.notes).forEach(function (address) {
+        var live = props.notes[address].filter(function (t) { return !t.resolved; }).length, place = data.where[address];
+        if (live && place) open[place.id] = (open[place.id] || 0) + live;
+      });
+      book.current.querySelectorAll("[data-notes]").forEach(function (node) { if (!open[node.id]) node.removeAttribute("data-notes"); });
+      Object.keys(open).forEach(function (id) {
+        var node = document.getElementById(id);
+        if (node && book.current.contains(node)) node.setAttribute("data-notes", open[id]);
+      });
       if (trace) {
         trace.hits.forEach(function (hit) { if (!want[hit.place.id]) want[hit.place.id] = hit.via ? "is-traced is-through" : "is-traced"; });
         want[trace.id] = "is-picked";
@@ -1018,7 +1055,7 @@ details.part:not([open]) { gap: 0; }
       h("div", { className: "book-row" },
         h(R.DocumentSpread, { className: "relative" }, kids),
         guide ? h(Guide, { mode: props.mode, lib: lib, docsOf: docsOf, entriesFor: entriesFor, open: open, picked: picked, here: here, current: current,
-          trace: trace, clearTrace: function () { setTrace(null); },
+          trace: trace, clearTrace: function () { setTrace(null); }, notes: props.notes, noteActs: props.noteActs,
           verdicts: props.verdicts, walk: walk, close: function () { setGuide(false); } }) : null),
       word ? h("aside", { className: "meaning", role: "status" },
         h("p", null, h("strong", null, word.term + ": "), word.meaning),
@@ -1190,7 +1227,38 @@ details.part:not([open]) { gap: 0; }
     var m = React.useState("provider"), mode = m[0], setMode = m[1];  // who the page is guiding
     var t = React.useState(false), tools = t[0], setTools = t[1];   // the extras for judging the design itself
     var vd = React.useState({}), verdicts = vd[0], setVerdicts = vd[1];
+    var nt = React.useState({}), notes = nt[0], setNotes = nt[1];  // address -> threads, in the platform's own comment shape
     var auditor = mode === "auditor";
+    var noteActs = {
+      add: function (address, body, parent) {
+        var made = { id: "note-" + Date.now(), author: auditor ? "Auditor" : "Provider", createdAt: new Date().toISOString(), body: body,
+          visibility: "all_parties", anchored: true, resolved: false, replies: [] };
+        setNotes(function (now) {
+          var next = Object.assign({}, now), threads = (now[address] || []).slice();
+          if (parent) threads = threads.map(function (t) { return t.id === parent ? Object.assign({}, t, { replies: t.replies.concat(made) }) : t; });
+          else threads.push(made);
+          next[address] = threads;
+          return next;
+        });
+      },
+      resolve: function (address, id) {
+        setNotes(function (now) {
+          var next = Object.assign({}, now);
+          next[address] = (now[address] || []).map(function (t) {
+            return t.id === id ? Object.assign({}, t, { resolved: !t.resolved, status: t.resolved ? undefined : "Resolved", statusTone: "success" }) : t;
+          });
+          return next;
+        });
+      },
+      remove: function (address, id) {
+        setNotes(function (now) {
+          var next = Object.assign({}, now);
+          next[address] = (now[address] || []).filter(function (t) { return t.id !== id; })
+            .map(function (t) { return Object.assign({}, t, { replies: t.replies.filter(function (r) { return r.id !== id; }) }); });
+          return next;
+        });
+      }
+    };
     var setVerdict = function (id, value) { setVerdicts(function (now) { var next = Object.assign({}, now); next[id] = value; return next; }); };
 
     React.useEffect(function () {
@@ -1249,7 +1317,8 @@ details.part:not([open]) { gap: 0; }
       h("main", { className: "work" },
         view === "table" ? h(AllDocuments, { lib: lib, verdicts: verdicts, open: function (binder, id) { openAt(binder, { address: id }); } })
         : !data ? h("p", { className: "loading" }, "Opening the binder.")
-        : h(Book, { key: data.key, data: data, lib: lib, mode: mode, tools: tools, verdicts: verdicts, setVerdict: setVerdict, arrive: arrive, leave: leave,
+        : h(Book, { key: data.key, data: data, lib: lib, mode: mode, tools: tools, verdicts: verdicts, setVerdict: setVerdict, notes: notes, noteActs: noteActs,
+            arrive: arrive, leave: leave,
             openBinder: function (binder, address) { openAt(binder, address ? { address: address } : null); } })));
   }
 
