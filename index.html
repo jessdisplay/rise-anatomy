@@ -164,6 +164,24 @@ details.part:not([open]) { gap: 0; }
 .guide-over { padding: 0 var(--spacing-s3); font-size: 0.8125em; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); }
 .guide-title { padding: 0 var(--spacing-s3) var(--spacing-s3); font-weight: 600; }
 .guide-page > .guide-what { padding: 0 var(--spacing-s3); }
+/* ---- the trace: one statement, and every place it is carried on the other pages */
+.doc .item { cursor: pointer; }
+.doc .item:hover { background: var(--muted); }
+.doc .item.is-picked, .reg th.is-picked { background: var(--tab-soft); box-shadow: inset 4px 0 0 var(--tab-solid); }
+.doc .item.is-traced, .reg th.is-traced { background: var(--primary-surface); box-shadow: inset 4px 0 0 var(--primary); }
+.doc .item.is-traced.is-through, .reg th.is-traced.is-through { background: none; box-shadow: inset 4px 0 0 var(--border); }  /* reached through another statement: marked, not lit */
+.trace-head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-s3); padding-right: var(--spacing-s3); }
+.trace-said { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; padding-bottom: var(--spacing-s3); }
+.trace-hint { padding-bottom: var(--spacing-s3); }
+.trace-step { display: grid; gap: 1px; padding-top: var(--spacing-s4); }
+.trace-name { display: flex; align-items: center; gap: var(--spacing-s3); padding: 0 var(--spacing-s3) var(--spacing-s2); }
+.trace-name .spine { flex: none; display: inline-grid; place-items: center; width: 1.625rem; height: 1.625rem; border-radius: var(--radius-full); background: var(--tab-soft); color: var(--tab-soft-foreground); font-size: 0.8125em; font-weight: 600; }
+.trace-none { margin: 0 var(--spacing-s3); padding: var(--spacing-s2) var(--spacing-s3); border-left: 3px solid var(--warning-solid); background: var(--warning-subtle); font-size: max(0.875em, 14px); }
+.guide.has-trace .guide-list { max-height: 30%; }  /* a selected statement gets most of the guide */
+.trace-quiet { padding: 0 var(--spacing-s3); font-size: max(0.875em, 14px); color: var(--muted-foreground); }
+.ix-row.trace-other { grid-template-columns: minmax(0, 1fr); margin-top: 0; font-weight: 400; text-decoration: underline; text-underline-offset: 0.2em; }
+.trace-via { display: block; overflow: hidden; text-overflow: ellipsis; font-size: max(0.875em, 14px); color: var(--muted-foreground); }
+.trace-more { justify-self: start; margin-left: var(--spacing-s3); }
 @media (max-width: 71.99rem) { .guide { position: absolute; z-index: 20; top: 0; right: 0; bottom: 0; width: min(23rem, 92vw); } }
 .go { color: inherit; text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
 .trail .go { color: var(--foreground); }
@@ -458,6 +476,7 @@ details.part:not([open]) { gap: 0; }
   // off the screen. Above, the five pages of the binder and the documents on each: a support
   // worker reads what each page is for, an auditor reads the verdict on every document and can
   // narrow the list to what still needs a look. Below, the index of the page being read.
+  var TRACE_ROWS = 6;
   var VERDICT = { conforms: ["Conforms", "success"], "non-conforming": ["Non-conforming", "destructive"] };
   function verdictBadge(verdict) {
     var known = VERDICT[verdict];
@@ -477,6 +496,8 @@ details.part:not([open]) { gap: 0; }
     var doc = props.docsOf(props.current).filter(function (d) { return d.id === props.picked[props.current]; })[0];
     var entries = doc ? props.entriesFor(doc) : [];
     var at = props.here[props.current] || "", index = React.useRef(null);
+    var trace = props.trace, sh = React.useState({}), shown = sh[0], setShown = sh[1];
+    React.useEffect(function () { setShown({}); if (index.current) index.current.scrollTop = 0; }, [trace && trace.n]);
 
     // Keep the part being read in sight in the index, moving only the index's own scroller.
     React.useEffect(function () {
@@ -486,7 +507,7 @@ details.part:not([open]) { gap: 0; }
       if (top < 0 || top > room) box.scrollTop += top - room / 2;
     }, [at, props.current]);
 
-    return h("aside", { className: "guide", "aria-label": auditor ? "Audit of this binder" : "Guide to this binder" },
+    return h("aside", { className: "guide" + (trace ? " has-trace" : ""), "aria-label": auditor ? "Audit of this binder" : "Guide to this binder" },
       h("div", { className: "guide-head" }, h("h2", null, auditor ? "Audit" : "Guide"),
         h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", "aria-label": "Close the guide", onClick: props.close }, h(R.Icon, { name: "close" }))),
       h("div", { className: "walk" },
@@ -517,10 +538,40 @@ details.part:not([open]) { gap: 0; }
                 auditor ? h("span", { className: "guide-meta" }, h("span", { className: "guide-what" }, d.id), verdictBadge(props.verdicts[d.id])) : null));
           }));
       })),
-      h("nav", { className: "guide-page", "aria-label": "On this page", ref: index },
+      trace ? h("nav", { className: "guide-page", "aria-label": "Where this appears", ref: index },
+        h("div", { className: "trace-head" }, h("p", { className: "guide-over" }, "Where this appears"),
+          h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: props.clearTrace }, "Page index")),
+        h("p", { className: "guide-title" }, trace.cite),
+        trace.label ? h("p", { className: "guide-what trace-said" }, trace.label) : null,
+        trace.hits.length ? null : h("p", { className: trace.elsewhere.length ? "trace-quiet" : "trace-none" },
+          trace.elsewhere.length ? "This statement is not part of this standard." : "This statement is not linked to anything in the library."),
+        !trace.hits.length ? null : lib.steps.map(function (step, i) {
+          if (step.key === trace.step) return null;
+          var hits = trace.hits.filter(function (hit) { return hit.place.step === step.key; });
+          var some = shown[step.key] ? hits : hits.slice(0, TRACE_ROWS);
+          return h("div", { className: "trace-step", key: step.key },
+            h("p", { className: "trace-name" }, h("span", { className: "spine" }, i + 1), h("strong", null, step.label)),
+            hits.length ? null : h("p", { className: "trace-quiet" },
+              props.docsOf(step.key).length ? "Nothing linked on this page." : "This standard has no document on this page."),
+            some.map(function (hit) {
+              return h("a", { key: hit.address, href: "#", className: "ix-row depth-1" + (hit.via ? " is-through" : ""), "data-go": hit.address },
+                h("span", { className: "ix" }, hit.place.short),
+                h("span", { className: "ix-label" }, hit.label || hit.place.plain, hit.via ? h("span", { className: "trace-via" }, "through " + hit.via) : null));
+            }),
+            hits.length > some.length ? h(R.Button, { type: "button", variant: "neutral", emphasis: "link", size: "sm", className: "trace-more",
+              onClick: function () { setShown(function (now) { var next = Object.assign({}, now); next[step.key] = true; return next; }); } },
+              "Show all " + hits.length) : null);
+        }),
+        trace.elsewhere.length ? h("div", { className: "trace-step" },
+          h("p", { className: "trace-name" }, h("strong", null, trace.hits.length ? "Also carried under" : "It is carried under")),
+          trace.elsewhere.map(function (x) {
+            return h("a", { key: x.key, href: "#", className: "ix-row depth-0 trace-other", "data-binder": x.key, "data-at": x.at }, h("span", { className: "ix-label" }, x.label));
+          })) : null)
+      : h("nav", { className: "guide-page", "aria-label": "On this page", ref: index },
         h("p", { className: "guide-over" }, "On this page"),
         h("p", { className: "guide-title" }, doc ? doc.title : reading.label),
         doc ? null : h("p", { className: "guide-what" }, "Choose a document from the list on the page."),
+        doc ? h("p", { className: "guide-what trace-hint" }, "Select any numbered statement to see where it appears in the other documents.") : null,
         entries.map(function (e, n) {
           if (e.group) return h("p", { className: "ix-group", key: n }, e.label);
           var does = e.go ? { "data-go": e.go } : { "data-jump": e.id };
@@ -609,6 +660,8 @@ details.part:not([open]) { gap: 0; }
     var g = React.useState(wide), guide = g[0], setGuide = g[1];
     var hr = React.useState({}), here = hr[0], setHere = hr[1];        // the part being read, per page
     var ac = React.useState(null), active = ac[0], setActive = ac[1];  // the page last opened, followed to or scrolled
+    var tr = React.useState(null), trace = tr[0], setTrace = tr[1];    // the statement being traced, and where it appears
+    var book = React.useRef(null);
     var mode = React.useRef(props.mode), guided = React.useRef(guide), started = React.useRef(false);
     mode.current = props.mode;
     guided.current = guide && wide();
@@ -695,6 +748,88 @@ details.part:not([open]) { gap: 0; }
       setLit({ id: place.id, n: Date.now() });
     }
 
+    // The thread through a statement. Its links are followed away from it in both directions, down
+    // the binder (policy, procedure, form, register) and up it, never back on themselves, so a
+    // place reached through another statement says which one.
+    var places = React.useMemo(function () {
+      var at = {}, rank = {}, order = {};
+      STEPS.forEach(function (step, i) { order[step] = i; });
+      Object.keys(data.where).forEach(function (address, i) {
+        var id = data.where[address].id;
+        rank[address] = i;
+        if (id.indexOf("top-") !== 0) (at[id] = at[id] || []).push(address);
+      });
+      return { at: at, rank: rank, order: order };
+    }, [data]);
+
+    function labelOf(address) {
+      var place = data.where[address], doc = docOf(place.step, place.doc);
+      var entry = doc && doc.index.filter(function (e) { return e.go === address || (e.id && e.id === place.id); })[0];
+      return entry ? entry.label : "";
+    }
+
+    function startTrace(id, step) {
+      var starts = places.at[id] || [];
+      if (!starts.length || (trace && trace.id === id)) { setTrace(null); return; }
+      var seen = {}, hits = [];
+      starts.forEach(function (address) { seen[address] = true; });
+      [1, -1].forEach(function (way) {
+        var queue = starts.map(function (address) { return { address: address, depth: 0 }; });
+        while (queue.length) {
+          var from = queue.shift(), level = places.order[data.where[from.address].step];
+          (data.links[from.address] || []).forEach(function (to) {
+            var place = data.where[to];
+            if (seen[to] || (places.order[place.step] - level) * way <= 0) return;
+            seen[to] = true;
+            hits.push({ address: to, place: place, label: labelOf(to), via: from.depth ? data.where[from.address].cite : "" });
+            queue.push({ address: to, depth: from.depth + 1 });
+          });
+        }
+      });
+      hits.sort(function (a, b) { return (a.via ? 1 : 0) - (b.via ? 1 : 0) || places.rank[a.address] - places.rank[b.address]; });
+      var others = [];
+      starts.forEach(function (address) {
+        (data.elsewhere[address] || []).forEach(function (key) {
+          var found = standards.filter(function (x) { return x.key === key; })[0];
+          if (found && !others.some(function (x) { return x.key === key; })) others.push({ key: key, at: address, label: found.index + " " + found.heading });
+        });
+      });
+      setTrace({ id: id, step: step, address: starts[0], cite: data.where[starts[0]].cite, label: labelOf(starts[0]), hits: hits, elsewhere: others, n: Date.now() });
+    }
+
+    // A new trace brings its first place into view on every page already open beside it.
+    React.useEffect(function () {
+      if (!trace) return;
+      open.forEach(function (step) {
+        if (step === trace.step) return;
+        trace.hits.some(function (hit) {
+          var target = hit.place.step === step ? document.getElementById(hit.place.id) : null;
+          if (target) reveal(target);
+          return !!target;
+        });
+      });
+    }, [trace && trace.n]);
+
+    // Mark the traced statement and its places on whatever pages are showing, after every draw.
+    React.useEffect(function () {
+      if (!book.current) return;
+      var want = {};
+      if (trace) {
+        trace.hits.forEach(function (hit) { if (!want[hit.place.id]) want[hit.place.id] = hit.via ? "is-traced is-through" : "is-traced"; });
+        want[trace.id] = "is-picked";
+      }
+      book.current.querySelectorAll(".is-traced, .is-picked").forEach(function (node) {
+        if (want[node.id]) return;
+        node.classList.remove("is-traced", "is-through", "is-picked");
+      });
+      Object.keys(want).forEach(function (id) {
+        var node = document.getElementById(id);
+        if (!node || !book.current.contains(node)) return;
+        node.classList.remove("is-traced", "is-through", "is-picked");
+        want[id].split(" ").forEach(function (name) { node.classList.add(name); });
+      });
+    });
+
     // Arriving from another binder, a search result or the table: go to what was asked for.
     React.useEffect(function () {
       if (!props.arrive) return;
@@ -717,7 +852,7 @@ details.part:not([open]) { gap: 0; }
       if (link) {
         event.preventDefault();
         if (link.closest(".guide") && !wide()) setGuide(false);  // as a drawer it gets out of the way of what was chosen
-        if (link.dataset.binder) { props.openBinder(link.dataset.binder); return; }
+        if (link.dataset.binder) { props.openBinder(link.dataset.binder, link.dataset.at); return; }
         if (link.dataset.open) {
           var to = link.dataset.open.split("|");
           pick(to[0], to[1] || "");
@@ -725,9 +860,17 @@ details.part:not([open]) { gap: 0; }
           return;
         }
         if (link.dataset.jump) { setLit({ id: link.dataset.jump, n: Date.now() }); return; }
-        var page = link.closest("[data-page]") || (link.closest(".guide-page") ? { dataset: { page: current } } : null);
+        var page = link.closest("[data-page]") || (link.closest(".guide-page") ? { dataset: { page: trace ? trace.step : current } } : null);
         go(link.dataset.go, page ? page.dataset.page : null);
         return;
+      }
+      // Selecting a statement traces it. Controls, and text being selected to copy, are left alone.
+      var onPage = event.target.closest("[data-page]");
+      if (onPage && !String(window.getSelection()) &&
+          !event.target.closest("button, input, textarea, select, label, summary, [role=radio], [role=checkbox]")) {
+        for (var holder = event.target.closest("[id]"); holder && onPage.contains(holder); holder = holder.parentElement && holder.parentElement.closest("[id]")) {
+          if (places.at[holder.id]) { startTrace(holder.id, onPage.dataset.page); break; }
+        }
       }
       var term = event.target.closest("button.term");
       setWord(term ? { term: term.dataset.term, meaning: term.dataset.def, source: term.dataset.source } : null);
@@ -791,7 +934,12 @@ details.part:not([open]) { gap: 0; }
         answers: answers[doc.id] || {}, setAnswers: function (v) { keep(setAnswers, answers, doc.id, v); }, save: function () { save(doc); }, saved: saved[doc.id],
         review: props.tools });
       if (doc.kind === "register") return h(RegisterPage, { doc: doc, rows: rows[doc.id] || [], sheet: sheets[doc.id] || 0,
-        setSheet: function (v) { keep(setSheets, sheets, doc.id, v); }, column: columns[doc.id] || null, setColumn: function (v) { keep(setColumns, columns, doc.id, v); } });
+        setSheet: function (v) { keep(setSheets, sheets, doc.id, v); }, column: columns[doc.id] || null,
+        setColumn: function (v) {
+          keep(setColumns, columns, doc.id, v);
+          var col = doc.register.columns.filter(function (c) { return c.letter === v; })[0];
+          if (col) startTrace(col.id, "registers");  // a column heading is a statement too
+        } });
       return h("div", Object.assign({ className: "doc" }, html(doc.html)));
     }
 
@@ -863,13 +1011,14 @@ details.part:not([open]) { gap: 0; }
       h(R.BreadcrumbItem, { index: data.crumbs[1].index, current: true, menu: h(R.DropdownMenuContent, { align: "start", className: "max-h-80 overflow-y-auto" },
         module.standards.map(function (x) { return h(R.DropdownMenuItem, { key: x.key, onSelect: function () { props.openBinder(x.key); } }, x.index + "  " + x.heading); })) }, data.crumbs[1].label));
 
-    return h("div", { className: "book", onClick: onClick },
+    return h("div", { className: "book", onClick: onClick, ref: book },
       h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, pills,
         guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
           h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
       h("div", { className: "book-row" },
         h(R.DocumentSpread, { className: "relative" }, kids),
         guide ? h(Guide, { mode: props.mode, lib: lib, docsOf: docsOf, entriesFor: entriesFor, open: open, picked: picked, here: here, current: current,
+          trace: trace, clearTrace: function () { setTrace(null); },
           verdicts: props.verdicts, walk: walk, close: function () { setGuide(false); } }) : null),
       word ? h("aside", { className: "meaning", role: "status" },
         h("p", null, h("strong", null, word.term + ": "), word.meaning),
@@ -1101,7 +1250,7 @@ details.part:not([open]) { gap: 0; }
         view === "table" ? h(AllDocuments, { lib: lib, verdicts: verdicts, open: function (binder, id) { openAt(binder, { address: id }); } })
         : !data ? h("p", { className: "loading" }, "Opening the binder.")
         : h(Book, { key: data.key, data: data, lib: lib, mode: mode, tools: tools, verdicts: verdicts, setVerdict: setVerdict, arrive: arrive, leave: leave,
-            openBinder: function (binder) { openAt(binder, null); } })));
+            openBinder: function (binder, address) { openAt(binder, address ? { address: address } : null); } })));
   }
 
   ReactDOM.createRoot(document.getElementById("root")).render(h(R.Router, null, h(App)));
