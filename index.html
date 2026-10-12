@@ -149,14 +149,23 @@ details.part:not([open]) { gap: 0; }
 .guide-head { display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-s4) var(--spacing-s4) var(--spacing-s3) var(--spacing-s5); }
 .guide-head h2 { font-size: 1.125em; font-weight: 600; }
 .guide-acts, .page-acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--spacing-s3) var(--spacing-s5); }
-/* The guide given half the window: the binder's list on the left, the page index or the selected statement beside it. */
-.guide.is-half { display: grid; width: 50%; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); grid-template-rows: auto auto auto minmax(0, 1fr);
-  grid-template-areas: "head head" "walk page" "tally page" "list page"; }
-.guide.is-half .guide-head { grid-area: head; }
-.guide.is-half .walk { grid-area: walk; }
-.guide.is-half .tally { grid-area: tally; }
-.guide.is-half .guide-list, .guide.is-half.has-trace .guide-list { grid-area: list; max-height: none; }
-.guide.is-half .guide-page { grid-area: page; border-top: 0; border-left: 1px solid var(--border); }
+/* The guide at half or full size: the binder's list on the left, the page index or the selected statement beside it.
+ * At full size it takes the place of the book and a third column lists every comment in the binder. */
+.guide.is-wide { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); }
+.guide.is-half { width: 50%; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); grid-template-areas: "head head" "walk page" "tally page" "list page"; }
+.guide.is-full { flex: 1; width: auto; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) minmax(0, 3fr);
+  grid-template-areas: "head head head" "walk page board" "tally page board" "list page board"; }
+.book-row.is-full > [data-slot="document-spread"] { display: none; }
+.guide.is-wide .guide-head { grid-area: head; }
+.guide.is-wide .walk { grid-area: walk; }
+.guide.is-wide .tally { grid-area: tally; }
+.guide.is-wide .guide-list, .guide.is-wide.has-trace .guide-list { grid-area: list; max-height: none; }
+.guide.is-wide .guide-page { grid-area: page; border-top: 0; border-left: 1px solid var(--border); }
+.guide-board { grid-area: board; min-height: 0; overflow-y: auto; padding: var(--spacing-s4) var(--spacing-s5); border-left: 1px solid var(--border); }
+.guide-board > .guide-over, .guide-board > .guide-title, .guide-board > .guide-what { padding-inline: 0; }
+.board-note { display: grid; gap: var(--spacing-s3); padding-block: var(--spacing-s5); border-top: 1px solid var(--border); }
+.board-note > .trace-said { padding: 0; }
+.board-note > .doc-link { justify-self: start; }
 .walk { display: flex; gap: var(--spacing-s3); padding: 0 var(--spacing-s4) var(--spacing-s4); }
 .walk .walk-next { flex: 1; min-width: 0; justify-content: space-between; }
 .walk-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -630,11 +639,30 @@ details.part:not([open]) { gap: 0; }
       if (top < 0 || top > room) box.scrollTop += top - room / 2;
     }, [at, props.current]);
 
-    return h("aside", { className: "guide" + (trace ? " has-trace" : "") + (props.half ? " is-half" : ""), "aria-label": auditor ? "Audit of this binder" : "Guide to this binder" },
+    // Every comment on this binder's documents, open ones first. The full size guide lists them all.
+    var mine = {}, board = [];
+    lib.steps.forEach(function (step) { props.docsOf(step.key).forEach(function (d) { mine[d.id] = true; }); });
+    Object.keys(props.notes).forEach(function (address) {
+      props.notes[address].forEach(function (t) { if (mine[t.anchor.doc]) board.push({ address: address, t: t }); });
+    });
+    board.sort(function (a, b) { return (a.t.resolved ? 1 : 0) - (b.t.resolved ? 1 : 0); });
+    var card = function (address, t) {
+      return h(React.Fragment, { key: t.id },
+        h(R.CommentCard, { comment: t, onReply: function (id) { setReplying(id); }, onResolve: function (id) { props.noteActs.resolve(address, id); },
+          onDelete: function (id) { props.noteActs.remove(address, id); } }),
+        replying === t.id ? h(R.CommentComposer, { className: "w-full", submitLabel: "Reply", placeholder: "Write a reply",
+          onSubmit: function (text) { props.noteActs.add(address, text, t.id, null); setReplying(null); }, onCancel: function () { setReplying(null); } }) : null);
+    };
+    var sizes = [["side", "Side"], ["half", "Half"], ["full", "Full"]];
+
+    return h("aside", { className: "guide" + (trace ? " has-trace" : "") + (props.size === "side" ? "" : " is-wide is-" + props.size),
+      "aria-label": auditor ? "Audit of this binder" : "Guide to this binder" },
       h("div", { className: "guide-head" }, h("h2", null, auditor ? "Audit" : "Guide"),
         h("div", { className: "guide-acts" },
-          h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", className: "guide-size", "aria-pressed": props.half,
-            onClick: function () { props.setHalf(!props.half); } }, h(R.Icon, { name: "expand" }), props.half ? "Narrow" : "Half screen"),
+          h("div", { className: "views guide-size", role: "group", "aria-label": "How much of the screen the guide takes" }, sizes.map(function (x) {
+            return h(R.Button, { key: x[0], type: "button", variant: "tab", size: "sm", emphasis: props.size === x[0] ? "solid" : "soft", "aria-pressed": props.size === x[0],
+              onClick: function () { props.setSize(x[0]); } }, x[1]);
+          })),
           h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", "aria-label": "Close the guide", onClick: props.close }, h(R.Icon, { name: "close" })))),
       h("div", { className: "walk" },
         h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", disabled: !props.walk.prev,
@@ -673,16 +701,14 @@ details.part:not([open]) { gap: 0; }
         trace.label ? h("p", { className: "guide-what trace-said" }, trace.label) : null,
         h("div", { className: "notes" },
           h("p", { className: "trace-name" }, h("strong", null, "Comments")),
-          threads.map(function (t) {
-            return h(React.Fragment, { key: t.id },
-              h(R.CommentCard, { comment: t, onReply: function (id) { setReplying(id); }, onResolve: function (id) { props.noteActs.resolve(trace.address, id); },
-                onDelete: function (id) { props.noteActs.remove(trace.address, id); } }),
-              replying === t.id ? h(R.CommentComposer, { className: "w-full", submitLabel: "Reply", placeholder: "Write a reply",
-                onSubmit: function (text) { props.noteActs.add(trace.address, text, t.id, null); setReplying(null); }, onCancel: function () { setReplying(null); } }) : null);
-          }),
+          threads.map(function (t) { return card(trace.address, t); }),
           h(R.CommentComposer, { key: trace.id + trace.line + draft, className: "w-full", autoFocus: trace.about === "document", submitLabel: "Comment",
             placeholder: trace.about === "document" ? "Comment on this document" : "Comment on this statement",
-            onSubmit: function (text) { props.noteActs.add(trace.address, text, null, { holder: trace.id, line: trace.line }); setDraft(draft + 1); },
+            onSubmit: function (text) {
+              props.noteActs.add(trace.address, text, null, { holder: trace.id, line: trace.line, step: trace.step, doc: props.picked[trace.step],
+                cite: trace.cite, said: trace.label, about: trace.about || "" });
+              setDraft(draft + 1);
+            },
             onCancel: function () { setDraft(draft + 1); } })),
         trace.about === "document" ? null : h("p", { className: "trace-name trace-where" }, h("strong", null, "Where it appears")),
         trace.about === "document" ? h("p", { className: "trace-quiet trace-where" }, "To comment on one statement, or a single line of one, select it in the document.")
@@ -722,7 +748,17 @@ details.part:not([open]) { gap: 0; }
           var does = e.go ? { "data-go": e.go } : { "data-jump": e.id };
           return h("a", Object.assign({ key: n, href: "#", className: "ix-row depth-" + e.depth + (at === e.id ? " is-here" : "") }, does),
             h("span", { className: "ix" }, e.short), h("span", { className: "ix-label" }, e.label));
-        })));
+        })),
+      props.size === "full" ? h("section", { className: "guide-board", "aria-label": "Comments in this binder" },
+        h("p", { className: "guide-over" }, "Comments in this binder"),
+        h("p", { className: "guide-title" }, board.length ? board.filter(function (x) { return !x.t.resolved; }).length + " open of " + board.length : "None yet"),
+        board.length ? null : h("p", { className: "guide-what" }, "Use the Comment button beside a page title, or select a statement or a single line in a document."),
+        board.map(function (x) {
+          return h("div", { className: "board-note", key: x.t.id },
+            h("button", { type: "button", className: "doc-link", onClick: function () { props.goNote(x.t.anchor); } }, x.t.anchor.cite),
+            x.t.anchor.about === "document" ? null : h("p", { className: "guide-what trace-said" }, x.t.anchor.said),
+            card(x.address, x.t));
+        })) : null);
   }
 
   // One page's frame. The document is the page: it scrolls with it, so it has the whole height of
@@ -804,9 +840,10 @@ details.part:not([open]) { gap: 0; }
     var ac = React.useState(null), active = ac[0], setActive = ac[1];  // the page last opened, followed to or scrolled
     var tr = React.useState(null), trace = tr[0], setTrace = tr[1];    // the statement being traced, and where it appears
     var book = React.useRef(null);
-    var hf = React.useState(false), half = hf[0], setHalf = hf[1];     // the guide given half the window
+    var sz = React.useState("side"), size = sz[0], setSize = sz[1];    // how much of the window the guide takes: side, half or full
+    var pd = React.useState(null), pending = pd[0], setPending = pd[1];  // a comment's place to go back to, once its page is drawn
     var guided = React.useRef(0);                                      // the width the guide takes beside the book, in rem
-    guided.current = guide && wide() ? (half ? window.innerWidth / 2 / rem() : 24) : 0;
+    guided.current = guide && wide() ? (size === "side" ? 24 : window.innerWidth / (size === "half" ? 2 : 1) / rem()) : 0;
     var room = function () { return capacity(STEPS.length, guided.current); };
     var o = React.useState(function () { return STEPS.slice(0, 1); }), open = o[0], setOpen = o[1];  // oldest first
     var p = React.useState(function () {
@@ -840,7 +877,7 @@ details.part:not([open]) { gap: 0; }
     }, []);
 
     // A wider guide leaves room for fewer pages.
-    React.useEffect(function () { setOpen(function (now) { return now.length > room() ? now.slice(-room()) : now; }); }, [half, guide]);
+    React.useEffect(function () { setOpen(function (now) { return now.length > room() ? now.slice(-room()) : now; }); }, [size, guide]);
 
     // Open pages, keeping `kept` on screen: when the window is full, the page opened longest ago makes room.
     function show(steps, kept) {
@@ -909,12 +946,12 @@ details.part:not([open]) { gap: 0; }
 
     // Select a statement, or one line of it. A statement of one line is selected whole. A part is
     // not a statement, so only its lines can be selected, and they carry no links of their own.
-    function startTrace(id, step, event) {
+    function startTrace(id, step, event, line) {
       var holder = document.getElementById(id), starts = places.at[id] || [];
       if (!holder) return;
-      var lines = linesOf(holder), no = starts.length && lines.length < 2 ? 0 : lineAt(lines, event);
+      var lines = linesOf(holder), no = line != null ? line : starts.length && lines.length < 2 ? 0 : lineAt(lines, event);
       if (!starts.length && !no) return;
-      if (trace && trace.id === id && trace.line === no) { setTrace(null); return; }
+      if (line == null && trace && trace.id === id && trace.line === no) { setTrace(null); return; }  // selecting it again lets it go
       var base = starts[0], said = starts.length ? data.where[base].cite : "";
       if (!starts.length) {
         var doc = docOf(step, picked[step]), entry = doc && doc.index.filter(function (e) { return e.id === id; })[0];
@@ -956,6 +993,21 @@ details.part:not([open]) { gap: 0; }
       setTrace({ id: "top-" + step, step: step, line: 0, address: doc.id, cite: label, label: doc.title, whole: "", loose: true, about: "document",
         hits: [], elsewhere: [], n: Date.now() });
     }
+
+    // Back to what a comment is about: open its document beside the guide, then select the statement or line again.
+    function goNote(anchor) {
+      if (size === "full") setSize("half");
+      pick(anchor.step, anchor.doc);
+      only(anchor.step);
+      setPending(anchor);
+    }
+    React.useEffect(function () {
+      var holder = pending && document.getElementById(pending.holder);
+      if (!holder) return;  // its page is still being drawn
+      if (pending.about === "document") commentOn(pending.step, docOf(pending.step, pending.doc), pending.cite);
+      else { startTrace(pending.holder, pending.step, null, pending.line); reveal(holder); }
+      setPending(null);
+    });
 
     // A new trace brings its first place into view on every page already open beside it.
     React.useEffect(function () {
@@ -1033,6 +1085,7 @@ details.part:not([open]) { gap: 0; }
       if (link) {
         event.preventDefault();
         if (link.closest(".guide") && !wide()) setGuide(false);  // as a drawer it gets out of the way of what was chosen
+        if (link.closest(".guide") && size === "full") setSize("half");  // at full size it makes room for what was chosen
         if (link.dataset.binder) { props.openBinder(link.dataset.binder, link.dataset.at); return; }
         if (link.dataset.open) {
           var to = link.dataset.open.split("|");
@@ -1207,11 +1260,11 @@ details.part:not([open]) { gap: 0; }
       h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, layout, pills,
         guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
           h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
-      h("div", { className: "book-row" },
+      h("div", { className: "book-row" + (guide && size === "full" ? " is-full" : "") },
         h(R.DocumentSpread, { className: "relative" }, kids),
         guide ? h(Guide, { mode: props.mode, lib: lib, docsOf: docsOf, entriesFor: entriesFor, open: open, picked: picked, here: here, current: current,
           trace: trace, clearTrace: function () { setTrace(null); }, notes: props.notes, noteActs: props.noteActs,
-          half: half, setHalf: setHalf,
+          size: size, setSize: setSize, goNote: goNote,
           verdicts: props.verdicts, walk: walk, close: function () { setGuide(false); } }) : null),
       word ? h("aside", { className: "meaning", role: "status" },
         h("p", null, h("strong", null, word.term + ": "), word.meaning),
