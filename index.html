@@ -42,6 +42,10 @@
 .hit-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hit-where { font-size: 0.875em; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .all-docs { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--spacing-s6); font-size: max(0.9375rem, 15px); }
+.doc-link { padding: 0; border: 0; background: none; color: inherit; font: inherit; font-weight: 600; text-align: left; text-decoration: underline; text-decoration-color: var(--border); text-underline-offset: 0.2em; cursor: pointer; }
+.all-docs [role="row"]:has(.doc-link) > [role="cell"] { cursor: pointer; }
+.all-docs [role="row"]:has(.doc-link):hover > [role="cell"] { background: var(--tab-subtle); }
+.all-docs [role="row"]:has(.doc-link):hover .doc-link, .doc-link:focus-visible { text-decoration-color: currentColor; }
 .badges { display: inline-flex; flex-wrap: wrap; gap: var(--spacing-s2); }
 .off-note { max-width: 60rem; padding: var(--spacing-s3) var(--spacing-s4); border-left: 3px solid var(--warning-solid); background: var(--warning-subtle); font-size: max(0.875rem, 14px); line-height: 1.5; }
 .doc-list { display: grid; max-width: 48rem; list-style: none; font-size: max(1rem, 16px); line-height: 1.5; }
@@ -993,8 +997,9 @@ details.part:not([open]) { gap: 0; }
     // Arriving from another binder, a search result or the table: go to what was asked for.
     React.useEffect(function () {
       if (!props.arrive) return;
-      if (props.arrive.part) { var step = props.arrive.step; if (step) { pick(step, props.arrive.doc); show([step], null); } setLit({ id: props.arrive.part, n: Date.now() }); }
-      else if (data.where[props.arrive.address]) go(props.arrive.address, null);
+      // What was asked for is shown on its own, not beside the page the binder happens to open on.
+      if (props.arrive.part) { var step = props.arrive.step; if (step) { pick(step, props.arrive.doc); only(step); } setLit({ id: props.arrive.part, n: Date.now() }); }
+      else if (data.where[props.arrive.address]) { go(props.arrive.address, null); only(data.where[props.arrive.address].step); }
     }, [props.arrive]);
 
     React.useEffect(function () {
@@ -1196,19 +1201,25 @@ details.part:not([open]) { gap: 0; }
       var mine = Object.keys(lib.docs).filter(function (id) { return of[lib.docs[id].home].module === m; });
       return { id: m.name, label: (m.no ? "Module " + m.no + ": " : "") + m.name + " (" + mine.length + " documents)", rows: mine.map(function (id) {
         var doc = lib.docs[id], home = of[doc.home].standard;
-        return { id: id, cells: { doc: id, title: doc.title, page: step[doc.step], standard: home.index + "  " + home.heading,
+        // The title opens the document, and so does anywhere else on its row: the reader should not have to cross the table to find the way in.
+        var title = doc.problem ? h("span", { className: "doc-cell" }, doc.title, h("span", { className: "quiet" }, doc.problem))
+          : h("button", { type: "button", className: "doc-link", onClick: function () { props.open(doc.home, id); } }, doc.title);
+        return { id: id, cells: { doc: id, title: title, page: step[doc.step], standard: home.index + "  " + home.heading,
           also: doc.binders.length > 1 ? "and " + (doc.binders.length - 1) + " more" : "",
           words: doc.words == null ? "" : doc.words.toLocaleString(),
           verdict: verdictBadge(props.verdicts[id]),
-          status: h("span", { className: "badges" }, h(R.Badge, { tone: doc.problem ? "warning" : "neutral", size: "sm" }, doc.status), doc.off ? h(R.Badge, { tone: "warning", size: "sm", title: doc.off }, "Outside the anatomy") : null),
-          open: doc.problem ? h("span", { className: "quiet" }, doc.problem)
-            : h(R.Button, { variant: "neutral", emphasis: "link", size: "sm", onClick: function () { props.open(doc.home, id); } }, "View document") } };
+          status: h("span", { className: "badges" }, h(R.Badge, { tone: doc.problem ? "warning" : "neutral", size: "sm" }, doc.status), doc.off ? h(R.Badge, { tone: "warning", size: "sm", title: doc.off }, "Outside the anatomy") : null) } };
       }) };
     });
-    return h("div", { className: "all-docs" }, h(R.DataTable, { caption: "Every document in the library",
+    function onRow(event) {
+      if (event.target.closest("button, a") || String(window.getSelection())) return;  // a title or a module heading acts for itself
+      var row = event.target.closest('[role="row"]'), link = row && row.querySelector(".doc-link");
+      if (link) link.click();
+    }
+    return h("div", { className: "all-docs", onClick: onRow }, h(R.DataTable, { caption: "Every document in the library",
       columns: [{ key: "doc", header: "Document" }, { key: "title", header: "Title" }, { key: "page", header: "Page" }, { key: "standard", header: "Standard" },
                 { key: "also", header: "Also in" }, { key: "words", header: "Words", align: "right" }, { key: "status", header: "Status" },
-                { key: "verdict", header: "Verdict" }, { key: "open", header: "" }],
+                { key: "verdict", header: "Verdict" }],
       groups: groups }));
   }
 
