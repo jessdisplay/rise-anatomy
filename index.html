@@ -193,6 +193,12 @@ details.part:not([open]) { gap: 0; }
 /* a statement with an open comment carries a small bubble with the count, in the margin under its address */
 .doc .item[data-notes] { position: relative; }
 .doc .item[data-notes]::after { content: attr(data-notes); position: absolute; left: 0; top: calc(var(--spacing-s5) + 2em); min-width: 1.75rem; padding: 0 var(--spacing-s2); border: 1px solid var(--info-subtle-foreground); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0; background: var(--info-subtle); color: var(--info-subtle-foreground); font-size: 14px; font-weight: 600; line-height: 1.5; text-align: center; }
+/* one line of a statement, selected or commented on: painted as a range, so the page itself is not changed */
+::highlight(rise-noted) { background-color: var(--info-subtle); }
+::highlight(rise-picked) { background-color: var(--tab-soft); }
+.rise-noted { background: var(--info-subtle); }
+.rise-picked { background: var(--tab-soft); }
+.doc .plain p, .doc .plain li { cursor: pointer; }
 .guide.has-trace .guide-list { max-height: 30%; }  /* a selected statement gets most of the guide */
 .trace-quiet { padding: 0 var(--spacing-s3); font-size: max(0.875em, 14px); color: var(--muted-foreground); }
 .ix-row.trace-other { grid-template-columns: minmax(0, 1fr); margin-top: 0; font-weight: 400; text-decoration: underline; text-underline-offset: 0.2em; }
@@ -290,6 +296,68 @@ details.part:not([open]) { gap: 0; }
   }
 
   function rem() { return parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16; }
+
+  // ---- lines. A numbered statement can hold several sentences, bullets or rows, and any one of
+  // them can be a statement in its own right. Each can be selected on its own. Nothing is added
+  // to the page for this: a line is found from where the reader pointed, and painted as a range.
+  var LINE = "p, li, dl.lines > div";
+  var CAN_PAINT = !!(window.Highlight && window.CSS && CSS.highlights);
+
+  // The lines that belong to a statement or a part itself, not to a statement inside it, in order.
+  function linesOf(holder) {
+    var out = [];
+    [].forEach.call(holder.querySelectorAll(LINE), function (box) {
+      if (box.closest(".trail, .quiet, summary, .record, .col-card, .reg-wrap, [role=group]") || box.querySelector(LINE)) return;
+      if (box.parentElement.closest(".item, .part") !== holder) return;
+      var text = box.textContent, from = 0, ends = /[.!?]["\u201d)\]]?\s+(?=[A-Z"\u201c\[(])/g, found, spans = [];
+      if (CAN_PAINT) while ((found = ends.exec(text))) { spans.push([from, found.index + found[0].replace(/\s+$/, "").length]); from = found.index + found[0].length; }
+      if (text.slice(from).trim()) spans.push([from, text.length]);
+      spans.forEach(function (span) { out.push({ box: box, from: span[0], to: span[1], text: text.slice(span[0], span[1]).trim() }); });
+    });
+    return out;
+  }
+
+  // How far into a line's text the reader pointed.
+  function offsetAt(box, x, y) {
+    var node = null, at = 0;
+    if (document.caretRangeFromPoint) { var range = document.caretRangeFromPoint(x, y); node = range && range.startContainer; at = range ? range.startOffset : 0; }
+    else if (document.caretPositionFromPoint) { var caret = document.caretPositionFromPoint(x, y); node = caret && caret.offsetNode; at = caret ? caret.offset : 0; }
+    var walker = document.createTreeWalker(box, NodeFilter.SHOW_TEXT), total = 0, text;
+    while ((text = walker.nextNode())) { if (text === node) return total + at; total += text.length; }
+    return 0;
+  }
+
+  // The number of the line pointed at, counting from one, or nothing when it was not a line.
+  function lineAt(lines, event) {
+    var box = event && event.target.closest(LINE), mine = lines.filter(function (line) { return line.box === box; });
+    if (!mine.length) return 0;
+    var offset = mine.length > 1 ? offsetAt(box, event.clientX, event.clientY) : 0;
+    var hit = mine.filter(function (line) { return offset < line.to; })[0] || mine[mine.length - 1];
+    return lines.indexOf(hit) + 1;
+  }
+
+  function rangeOf(line) {
+    var walker = document.createTreeWalker(line.box, NodeFilter.SHOW_TEXT), total = 0, text, range = document.createRange(), begun = false;
+    while ((text = walker.nextNode())) {
+      var end = total + text.length;
+      if (!begun && line.from < end) { range.setStart(text, line.from - total); begun = true; }
+      if (begun && line.to <= end) { range.setEnd(text, line.to - total); return range; }
+      total = end;
+    }
+    return null;
+  }
+
+  // Paint lines without touching the page. Where the browser cannot, the whole of each line's box is marked instead.
+  function paint(name, lines, root) {
+    if (CAN_PAINT) {
+      var mark = new Highlight();
+      lines.forEach(function (line) { var range = rangeOf(line); if (range) mark.add(range); });
+      if (mark.size) CSS.highlights.set(name, mark); else CSS.highlights.delete(name);
+      return;
+    }
+    [].forEach.call(root.querySelectorAll("." + name), function (box) { box.classList.remove(name); });
+    lines.forEach(function (line) { line.box.classList.add(name); });
+  }
 
   // Bring a part into view by scrolling only the boxes meant to scroll: the page's own sheet
   // and the register's own table. scrollIntoView would also drag the book, which is clipped.
@@ -589,12 +657,15 @@ details.part:not([open]) { gap: 0; }
               h(R.CommentCard, { comment: t, onReply: function (id) { setReplying(id); }, onResolve: function (id) { props.noteActs.resolve(trace.address, id); },
                 onDelete: function (id) { props.noteActs.remove(trace.address, id); } }),
               replying === t.id ? h(R.CommentComposer, { className: "w-full", submitLabel: "Reply", placeholder: "Write a reply",
-                onSubmit: function (text) { props.noteActs.add(trace.address, text, t.id); setReplying(null); }, onCancel: function () { setReplying(null); } }) : null);
+                onSubmit: function (text) { props.noteActs.add(trace.address, text, t.id, null); setReplying(null); }, onCancel: function () { setReplying(null); } }) : null);
           }),
           h(R.CommentComposer, { key: trace.id + draft, className: "w-full", autoFocus: false, submitLabel: "Comment", placeholder: "Comment on this statement",
-            onSubmit: function (text) { props.noteActs.add(trace.address, text); setDraft(draft + 1); }, onCancel: function () { setDraft(draft + 1); } })),
+            onSubmit: function (text) { props.noteActs.add(trace.address, text, null, { holder: trace.id, line: trace.line }); setDraft(draft + 1); },
+            onCancel: function () { setDraft(draft + 1); } })),
         h("p", { className: "trace-name trace-where" }, h("strong", null, "Where it appears")),
-        trace.hits.length ? null : h("p", { className: trace.elsewhere.length ? "trace-quiet" : "trace-none" },
+        trace.loose ? h("p", { className: "trace-quiet" }, "This line sits outside the numbered statements, so nothing is linked to it. It can still take comments.")
+        : trace.whole ? h("p", { className: "trace-quiet" }, "Links are kept for the whole statement, " + trace.whole + ".") : null,
+        trace.hits.length || trace.loose ? null : h("p", { className: trace.elsewhere.length ? "trace-quiet" : "trace-none" },
           trace.elsewhere.length ? "This statement is not part of this standard." : "This statement is not linked to anything in the library."),
         !trace.hits.length ? null : lib.steps.map(function (step, i) {
           if (step.key === trace.step) return null;
@@ -622,7 +693,7 @@ details.part:not([open]) { gap: 0; }
         h("p", { className: "guide-over" }, "On this page"),
         h("p", { className: "guide-title" }, doc ? doc.title : reading.label),
         doc ? null : h("p", { className: "guide-what" }, "Choose a document from the list on the page."),
-        doc ? h("p", { className: "guide-what trace-hint" }, "Select any numbered statement to comment on it and see where it appears in the other documents.") : null,
+        doc ? h("p", { className: "guide-what trace-hint" }, "Select any numbered statement, or a single line of one, to comment on it and see where it appears in the other documents.") : null,
         entries.map(function (e, n) {
           if (e.group) return h("p", { className: "ix-group", key: n }, e.label);
           var does = e.go ? { "data-go": e.go } : { "data-jump": e.id };
@@ -819,9 +890,21 @@ details.part:not([open]) { gap: 0; }
       return entry ? entry.label : "";
     }
 
-    function startTrace(id, step) {
-      var starts = places.at[id] || [];
-      if (!starts.length || (trace && trace.id === id)) { setTrace(null); return; }
+    // Select a statement, or one line of it. A statement of one line is selected whole. A part is
+    // not a statement, so only its lines can be selected, and they carry no links of their own.
+    function startTrace(id, step, event) {
+      var holder = document.getElementById(id), starts = places.at[id] || [];
+      if (!holder) return;
+      var lines = linesOf(holder), no = starts.length && lines.length < 2 ? 0 : lineAt(lines, event);
+      if (!starts.length && !no) return;
+      if (trace && trace.id === id && trace.line === no) { setTrace(null); return; }
+      var base = starts[0], said = starts.length ? data.where[base].cite : "";
+      if (!starts.length) {
+        var doc = docOf(step, picked[step]), entry = doc && doc.index.filter(function (e) { return e.id === id; })[0];
+        if (!entry) return;
+        base = doc.id + " part " + entry.short;
+        said = lib.steps.filter(function (x) { return x.key === step; })[0].label + ", part " + entry.short + " (" + entry.label + ")";
+      }
       var seen = {}, hits = [];
       starts.forEach(function (address) { seen[address] = true; });
       [1, -1].forEach(function (way) {
@@ -845,7 +928,9 @@ details.part:not([open]) { gap: 0; }
           if (found && !others.some(function (x) { return x.key === key; })) others.push({ key: key, at: address, label: found.index + " " + found.heading });
         });
       });
-      setTrace({ id: id, step: step, address: starts[0], cite: data.where[starts[0]].cite, label: labelOf(starts[0]), hits: hits, elsewhere: others, n: Date.now() });
+      setTrace({ id: id, step: step, line: no, address: no ? base + " line " + no : base, cite: no ? said + ", line " + no : said,
+        label: no ? lines[no - 1].text : labelOf(base), whole: no && starts.length ? said : "", loose: !starts.length,
+        hits: hits, elsewhere: others, n: Date.now() });
     }
 
     // A new trace brings its first place into view on every page already open beside it.
@@ -864,11 +949,22 @@ details.part:not([open]) { gap: 0; }
     // Mark the traced statement and its places on whatever pages are showing, after every draw.
     React.useEffect(function () {
       if (!book.current) return;
-      var want = {}, open = {};
+      var want = {}, open = {}, noted = [], chosen = [];
       Object.keys(props.notes).forEach(function (address) {
-        var live = props.notes[address].filter(function (t) { return !t.resolved; }).length, place = data.where[address];
-        if (live && place) open[place.id] = (open[place.id] || 0) + live;
+        props.notes[address].forEach(function (t) {
+          var node = t.resolved ? null : document.getElementById(t.anchor.holder);
+          if (!node || !book.current.contains(node)) return;
+          if (node.classList.contains("item")) open[node.id] = (open[node.id] || 0) + 1;
+          var line = t.anchor.line ? linesOf(node)[t.anchor.line - 1] : null;
+          if (line) noted.push(line);
+        });
       });
+      if (trace && trace.line) {
+        var held = document.getElementById(trace.id), line = held && linesOf(held)[trace.line - 1];
+        if (line) chosen.push(line);
+      }
+      paint("rise-noted", noted, book.current);
+      paint("rise-picked", chosen, book.current);
       book.current.querySelectorAll("[data-notes]").forEach(function (node) { if (!open[node.id]) node.removeAttribute("data-notes"); });
       Object.keys(open).forEach(function (id) {
         var node = document.getElementById(id);
@@ -876,7 +972,7 @@ details.part:not([open]) { gap: 0; }
       });
       if (trace) {
         trace.hits.forEach(function (hit) { if (!want[hit.place.id]) want[hit.place.id] = hit.via ? "is-traced is-through" : "is-traced"; });
-        want[trace.id] = "is-picked";
+        if (!trace.line) want[trace.id] = "is-picked";
       }
       book.current.querySelectorAll(".is-traced, .is-picked").forEach(function (node) {
         if (want[node.id]) return;
@@ -924,12 +1020,12 @@ details.part:not([open]) { gap: 0; }
         go(link.dataset.go, page ? page.dataset.page : null);
         return;
       }
-      // Selecting a statement traces it. Controls, and text being selected to copy, are left alone.
+      // Selecting a statement, or a line of one, traces it. Controls, and text being selected to copy, are left alone.
       var onPage = event.target.closest("[data-page]");
       if (onPage && !String(window.getSelection()) &&
           !event.target.closest("button, input, textarea, select, label, summary, [role=radio], [role=checkbox]")) {
         for (var holder = event.target.closest("[id]"); holder && onPage.contains(holder); holder = holder.parentElement && holder.parentElement.closest("[id]")) {
-          if (places.at[holder.id]) { startTrace(holder.id, onPage.dataset.page); break; }
+          if (places.at[holder.id] || holder.classList.contains("part")) { startTrace(holder.id, onPage.dataset.page, event); break; }
         }
       }
       var term = event.target.closest("button.term");
@@ -1253,9 +1349,9 @@ details.part:not([open]) { gap: 0; }
     var nt = React.useState({}), notes = nt[0], setNotes = nt[1];  // address -> threads, in the platform's own comment shape
     var auditor = mode === "auditor";
     var noteActs = {
-      add: function (address, body, parent) {
+      add: function (address, body, parent, anchor) {
         var made = { id: "note-" + Date.now(), author: auditor ? "Auditor" : "Provider", createdAt: new Date().toISOString(), body: body,
-          visibility: "all_parties", anchored: true, resolved: false, replies: [] };
+          visibility: "all_parties", anchored: true, resolved: false, replies: [], anchor: anchor };
         setNotes(function (now) {
           var next = Object.assign({}, now), threads = (now[address] || []).slice();
           if (parent) threads = threads.map(function (t) { return t.id === parent ? Object.assign({}, t, { replies: t.replies.concat(made) }) : t; });
