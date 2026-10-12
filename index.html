@@ -25,7 +25,15 @@
 .bar-tools .switch { display: flex; align-items: center; gap: var(--spacing-s3); }
 .bar-tools a { font-size: 0.875rem; text-underline-offset: 0.2em; }
 .book { display: flex; flex: 1; flex-direction: column; gap: var(--spacing-s5); min-height: 0; }
-.views { display: flex; gap: var(--spacing-s2); }
+/* A quiet choice among a few: words in one bordered strip, the chosen one underlined. Settings are drawn
+ * this way so that the five page tabs stay the only filled pills on the screen. */
+.seg { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s1); padding: var(--spacing-s1); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card); }
+.seg-item { padding: var(--spacing-s2) var(--spacing-s3); border: 0; border-radius: var(--radius-sm); background: none; color: var(--muted-foreground); font: inherit; font-size: max(0.875rem, 14px); font-weight: 500; line-height: 1.3; cursor: pointer; text-decoration-thickness: 2px; text-underline-offset: 0.35em; }
+.seg-item:hover { color: var(--foreground); }
+.seg-item.is-on { color: var(--foreground); font-weight: 600; text-decoration-line: underline; }
+.seg-item:disabled { opacity: 0.5; cursor: not-allowed; }
+.view-as { display: flex; align-items: center; gap: var(--spacing-s3); font-size: max(0.875rem, 14px); }
+.view-as select { padding: var(--spacing-s2) var(--spacing-s3); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--card); color: var(--foreground); font: inherit; font-weight: 600; cursor: pointer; }
 .search { position: relative; display: flex; align-items: center; gap: var(--spacing-s3); }
 .search input { width: 26rem; max-width: 60vw; background: var(--card); }
 .found { position: absolute; z-index: 30; top: calc(100% + var(--spacing-s2)); right: 0; width: min(44rem, 92vw); max-height: 70vh; overflow-y: auto; display: grid; gap: 1px; padding: var(--spacing-s3); border: 1px solid var(--tab); border-radius: var(--radius-lg); background: var(--card); font-size: max(0.9375rem, 15px); line-height: 1.4; }
@@ -149,12 +157,11 @@ details.part:not([open]) { gap: 0; }
 .guide-head { display: flex; align-items: center; justify-content: space-between; padding: var(--spacing-s4) var(--spacing-s4) var(--spacing-s3) var(--spacing-s5); }
 .guide-head h2 { font-size: 1.125em; font-weight: 600; }
 .guide-acts, .page-acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--spacing-s3) var(--spacing-s5); }
-/* The guide at half or full size: the binder's list on the left, the page index or the selected statement beside it.
- * At full size it takes the place of the book and a third column lists every comment in the binder. */
+/* The guide at half size: the binder's list on the left, the page index, the comments or the selected statement beside it.
+ * At full size it takes the place of the book and is a plain board: the documents with their verdicts, and every comment. */
 .guide.is-wide { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); }
 .guide.is-half { width: 50%; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); grid-template-areas: "head head" "walk page" "tally page" "list page"; }
-.guide.is-full { flex: 1; width: auto; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr) minmax(0, 3fr);
-  grid-template-areas: "head head head" "walk page board" "tally page board" "list page board"; }
+.guide.is-full { flex: 1; width: auto; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); grid-template-areas: "head head" "walk board" "tally board" "list board"; }
 .book-row.is-full > [data-slot="document-spread"] { display: none; }
 .guide.is-wide .guide-head { grid-area: head; }
 .guide.is-wide .walk { grid-area: walk; }
@@ -169,8 +176,8 @@ details.part:not([open]) { gap: 0; }
 .walk { display: flex; gap: var(--spacing-s3); padding: 0 var(--spacing-s4) var(--spacing-s4); }
 .walk .walk-next { flex: 1; min-width: 0; justify-content: space-between; }
 .walk-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tally { display: flex; flex-wrap: wrap; gap: var(--spacing-s2); padding: 0 var(--spacing-s4) var(--spacing-s4); border-bottom: 1px solid var(--border); }
-.guide-list { flex: 0 1 auto; min-height: 0; max-height: 64%; overflow-y: auto; padding: var(--spacing-s3); display: grid; gap: var(--spacing-s3); align-content: start; }
+.tally { padding: 0 var(--spacing-s4) var(--spacing-s4); border-bottom: 1px solid var(--border); }
+.guide-list { flex: 0 1 auto; min-height: 0; max-height: 50%; overflow-y: auto; padding: var(--spacing-s3); display: grid; gap: var(--spacing-s3); align-content: start; }
 .guide-step { display: grid; gap: 1px; }
 .guide-row { display: flex; align-items: center; gap: var(--spacing-s3); padding: var(--spacing-s3); border-radius: var(--radius-sm); color: var(--foreground); text-decoration: none; }
 .guide-row:hover { background: var(--muted); }
@@ -182,10 +189,13 @@ details.part:not([open]) { gap: 0; }
 .guide-meta { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-s3); margin-top: var(--spacing-s1); }
 .guide-row.is-doc { padding-left: calc(var(--spacing-s3) + 1.625rem + var(--spacing-s3)); }
 .guide-row.is-current { background: var(--tab-soft); font-weight: 600; }
-.guide-page { flex: 1 1 0; min-height: 8rem; overflow-y: auto; padding: var(--spacing-s4) var(--spacing-s3) var(--spacing-s4); border-top: 1px solid var(--border); }
+.guide-page { display: flex; flex-direction: column; flex: 1 1 0; min-height: 10rem; border-top: 1px solid var(--border); }
+.guide-page-head { flex: none; display: grid; gap: var(--spacing-s2); padding: var(--spacing-s4) var(--spacing-s3) var(--spacing-s2); }
+.guide-page-head > .seg { justify-self: start; margin-left: var(--spacing-s3); }
+.guide-page-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--spacing-s3) var(--spacing-s4); }
 .guide-over { padding: 0 var(--spacing-s3); font-size: 0.8125em; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); }
 .guide-title { padding: 0 var(--spacing-s3) var(--spacing-s3); font-weight: 600; }
-.guide-page > .guide-what { padding: 0 var(--spacing-s3); }
+.guide-page-body > .guide-what { padding: 0 var(--spacing-s3); }
 /* ---- one row of a register, read as a record: the same fields, listed down the page */
 .reg tr.is-row { cursor: pointer; }
 .reg tr.is-row:hover td, .reg tr.is-open td { background: var(--tab-subtle); }
@@ -214,12 +224,13 @@ details.part:not([open]) { gap: 0; }
 .trace-where { padding-top: var(--spacing-s5); }
 /* a statement with an open comment carries a small bubble with the count, in the margin under its address */
 .doc .item[data-notes] { position: relative; }
-.doc .item[data-notes]::after { content: attr(data-notes); position: absolute; left: 0; top: calc(var(--spacing-s5) + 2em); min-width: 1.75rem; padding: 0 var(--spacing-s2); border: 1px solid var(--info-subtle-foreground); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0; background: var(--info-subtle); color: var(--info-subtle-foreground); font-size: 14px; font-weight: 600; line-height: 1.5; text-align: center; }
+.doc .item[data-notes]::after { content: attr(data-notes); position: absolute; left: 0; top: calc(var(--spacing-s5) + 2em); min-width: 1.75rem; padding: 0 var(--spacing-s2); border: 1px solid var(--primary-solid); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0; background: var(--primary-surface); color: var(--primary-foreground); font-size: 14px; font-weight: 600; line-height: 1.5; text-align: center; }
 /* one line of a statement, selected or commented on: painted as a range, so the page itself is not changed */
-::highlight(rise-noted) { background-color: var(--info-subtle); }
-::highlight(rise-picked) { background-color: var(--tab-soft); }
-.rise-noted { background: var(--info-subtle); }
-.rise-picked { background: var(--tab-soft); }
+.doc ::selection { background-color: var(--primary-soft); color: var(--foreground); }  /* Rise yellow, not the browser's blue */
+::highlight(rise-noted) { background-color: var(--primary-surface); }
+::highlight(rise-picked) { background-color: var(--primary-soft); }
+.rise-noted { background: var(--primary-surface); }
+.rise-picked { background: var(--primary-soft); }
 .doc .plain p, .doc .plain li { cursor: pointer; }
 .guide.has-trace .guide-list { max-height: 30%; }  /* a selected statement gets most of the guide */
 .trace-quiet { padding: 0 var(--spacing-s3); font-size: max(0.875em, 14px); color: var(--muted-foreground); }
@@ -319,6 +330,18 @@ details.part:not([open]) { gap: 0; }
   }
 
   function rem() { return parseFloat(window.getComputedStyle(document.documentElement).fontSize) || 16; }
+
+  // A quiet choice among a few: plain words, the chosen one underlined, the way the platform's own
+  // segmented nav marks where you are. The five page tabs stay the only filled pills, so what moves
+  // you through a binder never looks like a setting.
+  function Seg(props) {  // options: [value, words, disabled, why]
+    return h("div", { className: "seg" + (props.className ? " " + props.className : ""), role: "group", "aria-label": props.label },
+      props.options.map(function (o) {
+        var on = props.value === o[0];
+        return h("button", { key: o[0], type: "button", className: "seg-item" + (on ? " is-on" : ""), "aria-pressed": on, disabled: !!o[2], title: o[3],
+          onClick: function () { props.onChange(o[0]); } }, o[1]);
+      }));
+  }
 
   // ---- lines. A numbered statement can hold several sentences, bullets or rows, and any one of
   // them can be a statement in its own right. Each can be selected on its own. Nothing is added
@@ -614,8 +637,9 @@ details.part:not([open]) { gap: 0; }
     lib.steps.forEach(function (step) { if (step.key !== "legislation") judged = judged.concat(props.docsOf(step.key)); });
     var count = { conforms: 0, "non-conforming": 0, none: 0 };
     judged.forEach(function (doc) { count[props.verdicts[doc.id] || "none"] += 1; });
-    var tally = [["all", "All", judged.length], ["conforms", "Conform", count.conforms], ["non-conforming", "Do not conform", count["non-conforming"]], ["none", "Not checked", count.none]];
-    var narrowed = auditor && filter !== "all";
+    var tally = [["all", "All " + judged.length], ["conforms", "Conform " + count.conforms], ["non-conforming", "Do not " + count["non-conforming"]], ["none", "Not checked " + count.none]];
+    var zo = React.useState("index"), zone = zo[0], setZone = zo[1];  // what the lower half holds while nothing is selected
+    var narrowed = filter !== "all";
     var reading = lib.steps.filter(function (step) { return step.key === props.current; })[0];
     var doc = props.docsOf(props.current).filter(function (d) { return d.id === props.picked[props.current]; })[0];
     var entries = doc ? props.entriesFor(doc) : [];
@@ -653,68 +677,42 @@ details.part:not([open]) { gap: 0; }
         replying === t.id ? h(R.CommentComposer, { className: "w-full", submitLabel: "Reply", placeholder: "Write a reply",
           onSubmit: function (text) { props.noteActs.add(address, text, t.id, null); setReplying(null); }, onCancel: function () { setReplying(null); } }) : null);
     };
-    var sizes = [["side", "Side"], ["half", "Half"], ["full", "Full"]];
-
-    return h("aside", { className: "guide" + (trace ? " has-trace" : "") + (props.size === "side" ? "" : " is-wide is-" + props.size),
-      "aria-label": auditor ? "Audit of this binder" : "Guide to this binder" },
-      h("div", { className: "guide-head" }, h("h2", null, auditor ? "Audit" : "Guide"),
-        h("div", { className: "guide-acts" },
-          h("div", { className: "views guide-size", role: "group", "aria-label": "How much of the screen the guide takes" }, sizes.map(function (x) {
-            return h(R.Button, { key: x[0], type: "button", variant: "tab", size: "sm", emphasis: props.size === x[0] ? "solid" : "soft", "aria-pressed": props.size === x[0],
-              onClick: function () { props.setSize(x[0]); } }, x[1]);
-          })),
-          h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", "aria-label": "Close the guide", onClick: props.close }, h(R.Icon, { name: "close" })))),
-      h("div", { className: "walk" },
-        h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", disabled: !props.walk.prev,
-          title: props.walk.prev ? "Previous: " + props.walk.prev.label : undefined, onClick: props.walk.prev ? props.walk.prev.go : undefined },
-          h(R.Icon, { name: "arrow-left" }), "Previous"),
-        h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "walk-next", disabled: !props.walk.next,
-          title: props.walk.next ? "Next: " + props.walk.next.label : undefined, onClick: props.walk.next ? props.walk.next.go : undefined },
-          h("span", { className: "walk-label" }, props.walk.next ? "Next: " + props.walk.next.label : "End of the library"), h(R.Icon, { name: "arrow-right" }))),
-      auditor ? h("div", { className: "tally" }, tally.map(function (x) {
-        return h(R.Button, { key: x[0], type: "button", variant: "tab", size: "sm", emphasis: filter === x[0] ? "solid" : "soft", "aria-pressed": filter === x[0],
-          onClick: function () { setFilter(x[0]); } }, x[1] + " " + x[2]);
-      })) : null,
-      h("nav", { className: "guide-list", "aria-label": "Pages of this binder" }, lib.steps.map(function (step, i) {
-        var law = step.key === "legislation";
-        var list = law ? [] : props.docsOf(step.key).filter(function (d) { return !narrowed || (props.verdicts[d.id] || "none") === filter; });
-        if (narrowed && !list.length) return null;
-        var isOpen = props.open.indexOf(step.key) !== -1;
-        return h("div", { className: "guide-step", key: step.key },
-          h("a", { href: "#", className: "guide-row is-step" + (isOpen ? " is-open" : "") + (law && props.current === step.key ? " is-current" : ""),
-            "data-open": step.key + "|" + (props.picked[step.key] || "") },
-            h("span", { className: "spine" }, i + 1),
-            h("span", { className: "guide-name" }, h("strong", null, step.label), auditor ? null : h("span", { className: "guide-what" }, step.what))),
-          list.map(function (d) {
-            var current = props.current === step.key && props.picked[step.key] === d.id, said = openNotes(d.id);
-            return h("a", { key: d.id, href: "#", className: "guide-row is-doc" + (current ? " is-current" : ""), "data-open": step.key + "|" + d.id },
-              h("span", { className: "guide-name" }, h("span", null, d.title),
-                auditor || said ? h("span", { className: "guide-meta" }, h("span", { className: "guide-what" }, auditor ? d.id : ""),
-                  h("span", { className: "badges" }, said ? h(R.Badge, { tone: "info", size: "sm" }, said + (said === 1 ? " comment" : " comments")) : null,
-                    auditor ? verdictBadge(props.verdicts[d.id]) : null)) : null));
-          }));
-      })),
-      trace ? h("nav", { className: "guide-page", "aria-label": "Where this appears", ref: index },
-        h("div", { className: "trace-head" }, h("p", { className: "guide-over" }, trace.about === "document" ? "This document" : "Selected statement"),
-          h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: props.clearTrace }, "Page index")),
-        h("p", { className: "guide-title" }, trace.cite),
-        trace.label ? h("p", { className: "guide-what trace-said" }, trace.label) : null,
-        h("div", { className: "notes" },
+    var sizes = [["side", "Side"], ["half", "Half"], ["full", "Full"]], full = props.size === "full";
+    var live = board.filter(function (x) { return !x.t.resolved; }).length;
+    var said = board.length ? live + " open of " + board.length : "No comments yet";
+    var notes = [
+      board.length ? null : h("p", { className: "guide-what", key: "none" }, "Use the Comment button beside a page title, or select a statement or one line of it in a document."),
+      board.map(function (x) {
+        return h("div", { className: "board-note", key: x.t.id },
+          h("button", { type: "button", className: "doc-link", onClick: function () { props.goNote(x.t.anchor); } }, x.t.anchor.cite),
+          x.t.anchor.about === "document" ? null : h("p", { className: "guide-what trace-said" }, x.t.anchor.said),
+          card(x.address, x.t));
+      })];
+    // The lower half has a heading that stays put and a body that scrolls, so nothing is ever cut mid sentence.
+    // It holds the selected statement, or every comment in the binder, or the index of the page being read.
+    var choose = h(Seg, { label: "What this half of the guide shows", value: zone, options: [["index", "On this page"], ["comments", "Comments" + (live ? " " + live : "")]], onChange: setZone });
+    var head, body;
+    if (trace) {
+      head = [h("div", { className: "trace-head", key: "over" }, h("p", { className: "guide-over" }, trace.about === "document" ? "This document" : trace.span ? "Highlighted words" : "Selected statement"),
+          h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: props.clearTrace }, "Back")),
+        h("p", { className: "guide-title", key: "title" }, trace.cite)];
+      body = [trace.label ? h("p", { className: "guide-what trace-said", key: "said" }, trace.label) : null,
+        h("div", { className: "notes", key: "notes" },
           h("p", { className: "trace-name" }, h("strong", null, "Comments")),
           threads.map(function (t) { return card(trace.address, t); }),
-          h(R.CommentComposer, { key: trace.id + trace.line + draft, className: "w-full", autoFocus: trace.about === "document", submitLabel: "Comment",
+          h(R.CommentComposer, { key: trace.id + trace.line + (trace.span || "") + draft, className: "w-full", autoFocus: trace.about === "document" || !!trace.span, submitLabel: "Comment",
             placeholder: trace.about === "document" ? "Comment on this document" : "Comment on this statement",
             onSubmit: function (text) {
               props.noteActs.add(trace.address, text, null, { holder: trace.id, line: trace.line, step: trace.step, doc: props.picked[trace.step],
-                cite: trace.cite, said: trace.label, about: trace.about || "" });
+                span: trace.span, cite: trace.cite, said: trace.label, about: trace.about || "" });
               setDraft(draft + 1);
             },
             onCancel: function () { setDraft(draft + 1); } })),
-        trace.about === "document" ? null : h("p", { className: "trace-name trace-where" }, h("strong", null, "Where it appears")),
-        trace.about === "document" ? h("p", { className: "trace-quiet trace-where" }, "To comment on one statement, or a single line of one, select it in the document.")
-        : trace.loose ? h("p", { className: "trace-quiet" }, "This line sits outside the numbered statements, so nothing is linked to it. It can still take comments.")
-        : trace.whole ? h("p", { className: "trace-quiet" }, "Links are kept for the whole statement, " + trace.whole + ".") : null,
-        trace.hits.length || trace.loose ? null : h("p", { className: trace.elsewhere.length ? "trace-quiet" : "trace-none" },
+        trace.about === "document" ? null : h("p", { className: "trace-name trace-where", key: "where" }, h("strong", null, "Where it appears")),
+        trace.about === "document" ? h("p", { className: "trace-quiet trace-where", key: "how" }, "To comment on one statement, or a single line of one, select it in the document.")
+        : trace.loose ? h("p", { className: "trace-quiet", key: "loose" }, "This line sits outside the numbered statements, so nothing is linked to it. It can still take comments.")
+        : trace.whole ? h("p", { className: "trace-quiet", key: "whole" }, "Links are kept for the whole statement, " + trace.whole + ".") : null,
+        trace.hits.length || trace.loose ? null : h("p", { className: trace.elsewhere.length ? "trace-quiet" : "trace-none", key: "none" },
           trace.elsewhere.length ? "This statement is not part of this standard." : "This statement is not linked to anything in the library."),
         !trace.hits.length ? null : lib.steps.map(function (step, i) {
           if (step.key === trace.step) return null;
@@ -733,32 +731,65 @@ details.part:not([open]) { gap: 0; }
               onClick: function () { setShown(function (now) { var next = Object.assign({}, now); next[step.key] = true; return next; }); } },
               "Show all " + hits.length) : null);
         }),
-        trace.elsewhere.length ? h("div", { className: "trace-step" },
+        trace.elsewhere.length ? h("div", { className: "trace-step", key: "elsewhere" },
           h("p", { className: "trace-name" }, h("strong", null, trace.hits.length ? "Also carried under" : "It is carried under")),
           trace.elsewhere.map(function (x) {
             return h("a", { key: x.key, href: "#", className: "ix-row depth-0 trace-other", "data-binder": x.key, "data-at": x.at }, h("span", { className: "ix-label" }, x.label));
-          })) : null)
-      : h("nav", { className: "guide-page", "aria-label": "On this page", ref: index },
-        h("p", { className: "guide-over" }, "On this page"),
-        h("p", { className: "guide-title" }, doc ? doc.title : reading.label),
-        doc ? null : h("p", { className: "guide-what" }, "Choose a document from the list on the page."),
-        doc ? h("p", { className: "guide-what trace-hint" }, "Select any numbered statement, or a single line of one, to comment on it and see where it appears in the other documents.") : null,
+          })) : null];
+    } else if (zone === "comments") {
+      head = [h(React.Fragment, { key: "choose" }, choose), h("p", { className: "guide-title", key: "title" }, said)];
+      body = notes;
+    } else {
+      head = [h(React.Fragment, { key: "choose" }, choose), h("p", { className: "guide-title", key: "title" }, doc ? doc.title : reading.label)];
+      body = [doc ? h("p", { className: "guide-what trace-hint", key: "hint" }, "Select a statement, or one line of it, to comment on it or see where else it appears.")
+          : h("p", { className: "guide-what", key: "hint" }, "Choose a document from the list on the page."),
         entries.map(function (e, n) {
           if (e.group) return h("p", { className: "ix-group", key: n }, e.label);
           var does = e.go ? { "data-go": e.go } : { "data-jump": e.id };
           return h("a", Object.assign({ key: n, href: "#", className: "ix-row depth-" + e.depth + (at === e.id ? " is-here" : "") }, does),
             h("span", { className: "ix" }, e.short), h("span", { className: "ix-label" }, e.label));
-        })),
-      props.size === "full" ? h("section", { className: "guide-board", "aria-label": "Comments in this binder" },
-        h("p", { className: "guide-over" }, "Comments in this binder"),
-        h("p", { className: "guide-title" }, board.length ? board.filter(function (x) { return !x.t.resolved; }).length + " open of " + board.length : "None yet"),
-        board.length ? null : h("p", { className: "guide-what" }, "Use the Comment button beside a page title, or select a statement or a single line in a document."),
-        board.map(function (x) {
-          return h("div", { className: "board-note", key: x.t.id },
-            h("button", { type: "button", className: "doc-link", onClick: function () { props.goNote(x.t.anchor); } }, x.t.anchor.cite),
-            x.t.anchor.about === "document" ? null : h("p", { className: "guide-what trace-said" }, x.t.anchor.said),
-            card(x.address, x.t));
-        })) : null);
+        })];
+    }
+
+    return h("aside", { className: "guide" + (trace ? " has-trace" : "") + (props.size === "side" ? "" : " is-wide is-" + props.size),
+      "aria-label": auditor ? "Audit of this binder" : "Guide to this binder" },
+      h("div", { className: "guide-head" }, h("h2", null, auditor ? "Audit" : "Guide"),
+        h("div", { className: "guide-acts" },
+          h(Seg, { className: "guide-size", label: "How much of the screen the guide takes", value: props.size, options: sizes, onChange: props.setSize }),
+          h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", "aria-label": "Close the guide", onClick: props.close }, h(R.Icon, { name: "close" })))),
+      h("div", { className: "walk" },
+        h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", disabled: !props.walk.prev,
+          title: props.walk.prev ? "Previous: " + props.walk.prev.label : undefined, onClick: props.walk.prev ? props.walk.prev.go : undefined },
+          h(R.Icon, { name: "arrow-left" }), "Previous"),
+        h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "walk-next", disabled: !props.walk.next,
+          title: props.walk.next ? "Next: " + props.walk.next.label : undefined, onClick: props.walk.next ? props.walk.next.go : undefined },
+          h("span", { className: "walk-label" }, props.walk.next ? "Next: " + props.walk.next.label : "End of the library"), h(R.Icon, { name: "arrow-right" }))),
+      h("div", { className: "tally" }, h(Seg, { label: "Show documents by verdict", value: filter, options: tally, onChange: setFilter })),
+      h("nav", { className: "guide-list", "aria-label": "Pages of this binder" }, lib.steps.map(function (step, i) {
+        var law = step.key === "legislation";
+        var list = law ? [] : props.docsOf(step.key).filter(function (d) { return !narrowed || (props.verdicts[d.id] || "none") === filter; });
+        if (narrowed && !list.length) return null;
+        var isOpen = props.open.indexOf(step.key) !== -1;
+        return h("div", { className: "guide-step", key: step.key },
+          h("a", { href: "#", className: "guide-row is-step" + (isOpen ? " is-open" : "") + (law && props.current === step.key ? " is-current" : ""),
+            "data-open": step.key + "|" + (props.picked[step.key] || "") },
+            h("span", { className: "spine" }, i + 1),
+            h("span", { className: "guide-name" }, h("strong", null, step.label), auditor ? null : h("span", { className: "guide-what" }, step.what))),
+          list.map(function (d) {
+            var current = props.current === step.key && props.picked[step.key] === d.id, open = openNotes(d.id);
+            return h("a", { key: d.id, href: "#", className: "guide-row is-doc" + (current ? " is-current" : ""), "data-open": step.key + "|" + d.id },
+              h("span", { className: "guide-name" }, h("span", null, d.title),
+                h("span", { className: "guide-meta" }, h("span", { className: "guide-what" }, auditor ? d.id : ""),
+                  h("span", { className: "badges" }, open ? h(R.Badge, { tone: "primary", size: "sm" }, open + (open === 1 ? " comment" : " comments")) : null,
+                    verdictBadge(props.verdicts[d.id])))));
+          }));
+      })),
+      // At full size the book is out of sight, so the half that follows the page being read is left out too.
+      full ? null : h("section", { className: "guide-page", "aria-label": trace ? "Selected statement" : zone === "comments" ? "Comments in this binder" : "On this page" },
+        h("div", { className: "guide-page-head" }, head),
+        h("div", { className: "guide-page-body", ref: index }, body)),
+      full ? h("section", { className: "guide-board", "aria-label": "Comments in this binder" },
+        h("p", { className: "guide-over" }, "Comments in this binder"), h("p", { className: "guide-title" }, said), notes) : null);
   }
 
   // One page's frame. The document is the page: it scrolls with it, so it has the whole height of
@@ -839,7 +870,7 @@ details.part:not([open]) { gap: 0; }
     var hr = React.useState({}), here = hr[0], setHere = hr[1];        // the part being read, per page
     var ac = React.useState(null), active = ac[0], setActive = ac[1];  // the page last opened, followed to or scrolled
     var tr = React.useState(null), trace = tr[0], setTrace = tr[1];    // the statement being traced, and where it appears
-    var book = React.useRef(null);
+    var book = React.useRef(null), swept = React.useRef(0);  // when words were last highlighted, so the click that ends the sweep is not read as a selection
     var sz = React.useState("side"), size = sz[0], setSize = sz[1];    // how much of the window the guide takes: side, half or full
     var pd = React.useState(null), pending = pd[0], setPending = pd[1];  // a comment's place to go back to, once its page is drawn
     var guided = React.useRef(0);                                      // the width the guide takes beside the book, in rem
@@ -848,7 +879,7 @@ details.part:not([open]) { gap: 0; }
     var o = React.useState(function () { return STEPS.slice(0, 1); }), open = o[0], setOpen = o[1];  // oldest first
     var p = React.useState(function () {
       var first = {};
-      STEPS.forEach(function (step) { first[step] = docsOf(step).length === 1 && !data.steps[step].unread.length ? docsOf(step)[0].id : ""; });
+      STEPS.forEach(function (step) { first[step] = docsOf(step).length && !data.steps[step].unread.length ? docsOf(step)[0].id : ""; });
       return first;
     }), picked = p[0], setPicked = p[1];
     var l = React.useState(null), lit = l[0], setLit = l[1];
@@ -946,12 +977,12 @@ details.part:not([open]) { gap: 0; }
 
     // Select a statement, or one line of it. A statement of one line is selected whole. A part is
     // not a statement, so only its lines can be selected, and they carry no links of their own.
-    function startTrace(id, step, event, line) {
+    function startTrace(id, step, event, line, span) {
       var holder = document.getElementById(id), starts = places.at[id] || [];
       if (!holder) return;
-      var lines = linesOf(holder), no = line != null ? line : starts.length && lines.length < 2 ? 0 : lineAt(lines, event);
-      if (!starts.length && !no) return;
-      if (line == null && trace && trace.id === id && trace.line === no) { setTrace(null); return; }  // selecting it again lets it go
+      var lines = linesOf(holder), no = span ? 0 : line != null ? line : starts.length && lines.length < 2 ? 0 : lineAt(lines, event);
+      if (!starts.length && !no && !span) return;
+      if (line == null && !span && trace && trace.id === id && trace.line === no && !trace.span) { setTrace(null); return; }  // selecting it again lets it go
       var base = starts[0], said = starts.length ? data.where[base].cite : "";
       if (!starts.length) {
         var doc = docOf(step, picked[step]), entry = doc && doc.index.filter(function (e) { return e.id === id; })[0];
@@ -982,9 +1013,11 @@ details.part:not([open]) { gap: 0; }
           if (found && !others.some(function (x) { return x.key === key; })) others.push({ key: key, at: address, label: found.index + " " + found.heading });
         });
       });
-      setTrace({ id: id, step: step, line: no, address: no ? base + " line " + no : base, cite: no ? said + ", line " + no : said,
-        label: no ? lines[no - 1].text : labelOf(base), whole: no && starts.length ? said : "", loose: !starts.length,
-        hits: hits, elsewhere: others, n: Date.now() });
+      setTrace({ id: id, step: step, line: no, span: span || null,
+        address: span ? base + " words " + span[0] + " to " + span[1] : no ? base + " line " + no : base,
+        cite: span ? said + ", highlighted words" : no ? said + ", line " + no : said,
+        label: span ? holder.textContent.slice(span[0], span[1]).trim() : no ? lines[no - 1].text : labelOf(base),
+        whole: (no || span) && starts.length ? said : "", loose: !starts.length, hits: hits, elsewhere: others, n: Date.now() });
     }
 
     // The Comment button on a page: the comment is about the document as a whole, and the guide opens to take it.
@@ -1005,7 +1038,7 @@ details.part:not([open]) { gap: 0; }
       var holder = pending && document.getElementById(pending.holder);
       if (!holder) return;  // its page is still being drawn
       if (pending.about === "document") commentOn(pending.step, docOf(pending.step, pending.doc), pending.cite);
-      else { startTrace(pending.holder, pending.step, null, pending.line); reveal(holder); }
+      else { startTrace(pending.holder, pending.step, null, pending.line, pending.span); reveal(holder); }
       setPending(null);
     });
 
@@ -1031,12 +1064,13 @@ details.part:not([open]) { gap: 0; }
           var node = t.resolved ? null : document.getElementById(t.anchor.holder);
           if (!node || !book.current.contains(node)) return;
           if (node.classList.contains("item")) open[node.id] = (open[node.id] || 0) + 1;
-          var line = t.anchor.line ? linesOf(node)[t.anchor.line - 1] : null;
+          var line = t.anchor.span ? { box: node, from: t.anchor.span[0], to: t.anchor.span[1] } : t.anchor.line ? linesOf(node)[t.anchor.line - 1] : null;
           if (line) noted.push(line);
         });
       });
-      if (trace && trace.line) {
-        var held = document.getElementById(trace.id), line = held && linesOf(held)[trace.line - 1];
+      if (trace && (trace.line || trace.span)) {
+        var held = document.getElementById(trace.id);
+        var line = held && (trace.span ? { box: held, from: trace.span[0], to: trace.span[1] } : linesOf(held)[trace.line - 1]);
         if (line) chosen.push(line);
       }
       paint("rise-noted", noted, book.current);
@@ -1048,7 +1082,7 @@ details.part:not([open]) { gap: 0; }
       });
       if (trace) {
         trace.hits.forEach(function (hit) { if (!want[hit.place.id]) want[hit.place.id] = hit.via ? "is-traced is-through" : "is-traced"; });
-        if (!trace.line) want[trace.id] = "is-picked";
+        if (!trace.line && !trace.span) want[trace.id] = "is-picked";
       }
       book.current.querySelectorAll(".is-traced, .is-picked").forEach(function (node) {
         if (want[node.id]) return;
@@ -1099,6 +1133,7 @@ details.part:not([open]) { gap: 0; }
         return;
       }
       // Selecting a statement, or a line of one, traces it. Controls, and text being selected to copy, are left alone.
+      if (Date.now() - swept.current < 400) return;
       var onPage = event.target.closest("[data-page]");
       if (onPage && !String(window.getSelection()) &&
           !event.target.closest("button, input, textarea, select, label, summary, [role=radio], [role=checkbox]")) {
@@ -1180,15 +1215,19 @@ details.part:not([open]) { gap: 0; }
     function page(step) {
       var doc = docOf(step, picked[step]), all = docsOf(step).length + data.steps[step].unread.length;
       var label = lib.steps.filter(function (x) { return x.key === step; })[0].label;
-      var more = doc && all !== 1 ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", "data-open": step + "|" },
-        h(R.Icon, { name: "table" }), "All " + all + " " + label.toLowerCase()) : null;
+      // A page with several documents names them all at its top, so moving between them is one press.
+      var more = doc && all !== 1 ? h(React.Fragment, null,
+        docsOf(step).length > 1 ? h(Seg, { label: label + " documents for this standard", value: doc.id,
+          options: docsOf(step).map(function (d) { return [d.id, d.title]; }), onChange: function (id) { pick(step, id); } }) : null,
+        data.steps[step].unread.length ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", "data-open": step + "|" },
+          h(R.Icon, { name: "table" }), "All " + all + " " + label.toLowerCase()) : null) : null;
       return h(R.DocumentPage, { key: "page-" + step, id: "top-" + step, bare: true, titleClassName: "text-h2",
         title: doc ? doc.title : label, subtitle: doc ? doc.subtitle : all + (all === 1 ? " document" : " documents") + " for this standard at 0.3.0",
         statusSlot: doc && doc.off ? h("p", { className: "off-note" }, doc.off) : null,
         action: doc ? h("div", { className: "page-acts" },
           h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { commentOn(step, doc, label); } },
             h(R.Icon, { name: "comment" }), "Comment"),
-          props.mode === "auditor" && step !== "legislation"
+          step !== "legislation"
             ? h(R.ConformanceControl, { value: props.verdicts[doc.id] || "", onValueChange: function (value) { props.setVerdict(doc.id, value); } }) : null) : null,
         basis: open.length > 1 ? 100 / open.length : null, className: "binder-page" + (open.length > 2 ? " is-tight" : ""),
         "data-page": step, "data-step": step },
@@ -1222,17 +1261,19 @@ details.part:not([open]) { gap: 0; }
     // Every step keeps its spine, in order; an open step has its page straight after its spine.
     // One page, or pages side by side. The switch says which, and turning it on opens the next page beside this one.
     var split = open.length > 1, canSplit = room() > 1;
-    var layout = h("div", { className: "views", role: "group", "aria-label": "Pages shown" },
-      h(R.Button, { type: "button", variant: "tab", size: "sm", emphasis: split ? "soft" : "solid", "aria-pressed": !split, onClick: function () { only(current); } }, "One page"),
-      h(R.Button, { type: "button", variant: "tab", size: "sm", emphasis: split ? "solid" : "soft", "aria-pressed": split, disabled: !canSplit && !split,
-        title: canSplit || split ? undefined : "This window is too narrow for two pages",
-        onClick: function () { if (!split) show([STEPS[STEPS.indexOf(current) + 1] || STEPS[STEPS.indexOf(current) - 1]], current); } }, "Side by side"));
+    var layout = h(Seg, { label: "Pages shown", value: split ? "split" : "one",
+      options: [["one", "One page"], ["split", "Side by side", !canSplit && !split, canSplit || split ? undefined : "This window is too narrow for two pages"]],
+      onChange: function (to) {
+        if (size === "full") setSize("half");  // the book comes back into view to show what was asked for
+        if (to === "one") only(current);
+        else if (!split) show([STEPS[STEPS.indexOf(current) + 1] || STEPS[STEPS.indexOf(current) - 1]], current);
+      } });
 
     var kids = [];
     STEPS.forEach(function (step, i) {
       var isOpen = open.indexOf(step) !== -1;
       kids.push(h(R.PageSpine, { key: "spine-" + step, number: i + 1, active: isOpen,
-        onClick: function () { if (isOpen || !split) only(step); else show([step], null); } }));
+        onClick: function () { if (size === "full") setSize("half"); if (isOpen || !split) only(step); else show([step], null); } }));
       if (isOpen) kids.push(page(step));
     });
 
@@ -1243,6 +1284,7 @@ details.part:not([open]) { gap: 0; }
       return h(R.Button, { key: x.key, variant: "tab", size: "md", emphasis: isOpen ? "solid" : "soft", className: "font-normal",
         "data-step": x.key, "aria-pressed": isOpen,
         onClick: function () {
+          if (size === "full") { setSize("half"); only(x.key); return; }
           if (!isOpen) { if (split) show([x.key], null); else only(x.key); }
           else if (open.length > 1) setOpen(open.filter(function (y) { return y !== x.key; }));
         } }, h("span", { className: "pill-dot" }), x.label);
@@ -1256,7 +1298,29 @@ details.part:not([open]) { gap: 0; }
       h(R.BreadcrumbItem, { index: data.crumbs[1].index, current: true, menu: h(R.DropdownMenuContent, { align: "start", className: "max-h-80 overflow-y-auto" },
         module.standards.map(function (x) { return h(R.DropdownMenuItem, { key: x.key, onSelect: function () { props.openBinder(x.key); } }, x.index + "  " + x.heading); })) }, data.crumbs[1].label));
 
-    return h("div", { className: "book", onClick: onClick, ref: book },
+    // Highlighting words in a document selects exactly those words, as it does in the platform: the comment box opens on them.
+    function onSweep() {
+      var chosen = window.getSelection();
+      if (!chosen || chosen.isCollapsed || !chosen.rangeCount || String(chosen).trim().length < 2) return;
+      var range = chosen.getRangeAt(0), from = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
+      var onPage = from && from.closest("[data-page]");
+      if (!onPage || !from.closest(".doc") || from.closest("input, textarea, [role=group], .record, .reg-wrap, .trail")) return;
+      var holder = from.closest(".item, .part");
+      while (holder && !(places.at[holder.id] || holder.classList.contains("part"))) holder = holder.parentElement && holder.parentElement.closest(".item, .part");
+      if (!holder) return;
+      var before = document.createRange(), upto = document.createRange();
+      before.selectNodeContents(holder);
+      before.setEnd(range.startContainer, range.startOffset);
+      upto.selectNodeContents(holder);
+      upto.setEnd(range.endContainer, range.endOffset);
+      var start = before.toString().length, end = Math.min(holder.textContent.length, upto.toString().length);  // words past the end of the statement are left out
+      if (end <= start) return;
+      swept.current = Date.now();
+      chosen.removeAllRanges();  // the page's own highlight takes over from the browser's
+      startTrace(holder.id, onPage.dataset.page, null, null, [start, end]);
+    }
+
+    return h("div", { className: "book", onClick: onClick, onMouseUp: onSweep, ref: book },
       h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, layout, pills,
         guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
           h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
@@ -1511,12 +1575,10 @@ details.part:not([open]) { gap: 0; }
       h("header", { className: "bar" },
         h(R.RiseWordmark, { className: "mark" }),
         h("div", { className: "bar-tools" },
-          h("div", { className: "views" },
-            h(R.Button, { variant: "tab", size: "sm", emphasis: !auditor ? "solid" : "soft", "aria-pressed": !auditor, onClick: function () { setMode("provider"); } }, "Provider"),
-            h(R.Button, { variant: "tab", size: "sm", emphasis: auditor ? "solid" : "soft", "aria-pressed": auditor, onClick: function () { setMode("auditor"); } }, "Auditor")),
-          h("div", { className: "views" },
-            h(R.Button, { variant: "tab", size: "sm", emphasis: view === "binder" ? "solid" : "soft", "aria-pressed": view === "binder", onClick: function () { setView("binder"); } }, "Binder"),
-            h(R.Button, { variant: "tab", size: "sm", emphasis: view === "table" ? "solid" : "soft", "aria-pressed": view === "table", onClick: function () { setView("table"); } }, "All documents")),
+          h("label", { className: "view-as" }, h("span", null, "View as"),
+            h("select", { value: mode, onChange: function (event) { setMode(event.target.value); } },
+              h("option", { value: "provider" }, "Provider"), h("option", { value: "auditor" }, "Auditor"))),
+          h(Seg, { label: "What is shown", value: view, options: [["binder", "Binder"], ["table", "All documents"]], onChange: setView }),
           h(Search, { here: key, steps: lib.steps, open: function (row) {
             var doc = row.a.split(" ").slice(0, row.a.charAt(0) === "s" ? 2 : 1).join(" ");
             var stay = data && (data.where[row.a] || data.where[doc]);
