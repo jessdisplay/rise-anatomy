@@ -509,10 +509,19 @@ details.part:not([open]) { gap: 0; }
 
   // One page's frame: its controls and its sheet. It reports the part being read, so the guide can mark it.
   function Pane(props) {
-    var fit = React.useRef(null), entries = React.useRef(props.entries), tell = React.useRef(props.onHere);
+    var fit = React.useRef(null), entries = React.useRef(props.entries), tell = React.useRef(props.onHere), held = React.useRef(null);
     entries.current = props.entries;
     tell.current = props.onHere;
     var scroller = function () { return fit.current && fit.current.querySelector('[data-slot="document-sheet"] > div'); };
+
+    // A part the reader was just taken to is the part being read, until they move the page themselves.
+    React.useEffect(function () {
+      var box = scroller(), id = props.lit && props.lit.id;
+      if (!box || !id || !entries.current.some(function (e) { return e.id === id && !e.sideways; })) return;
+      if (!box.contains(document.getElementById(id))) return;
+      held.current = id;
+      tell.current(id, true);
+    }, [props.lit]);
 
     // The part being read is the last one whose top has reached the top of the sheet.
     React.useEffect(function () {
@@ -521,6 +530,7 @@ details.part:not([open]) { gap: 0; }
       var waiting = false;
       function measure(moved) {
         waiting = false;
+        if (held.current) { tell.current(held.current, moved === true); return; }
         var line = box.getBoundingClientRect().top + 120, found = null;
         entries.current.forEach(function (e) {
           if (!e.id || e.sideways) return;
@@ -530,9 +540,15 @@ details.part:not([open]) { gap: 0; }
         tell.current(found, moved === true);
       }
       function onScroll() { if (!waiting) { waiting = true; window.requestAnimationFrame(function () { measure(true); }); } }
+      function release() { held.current = null; }
+      var own = ["wheel", "touchmove", "keydown", "pointerdown"];
       box.addEventListener("scroll", onScroll, { passive: true });
+      own.forEach(function (name) { box.addEventListener(name, release, { passive: true }); });
       measure(false);
-      return function () { box.removeEventListener("scroll", onScroll); };
+      return function () {
+        box.removeEventListener("scroll", onScroll);
+        own.forEach(function (name) { box.removeEventListener(name, release); });
+      };
     }, [props.step, props.docId]);
 
     return h("div", { className: "pane-fit", ref: fit },
@@ -766,7 +782,7 @@ details.part:not([open]) { gap: 0; }
           ? h(R.ConformanceControl, { value: props.verdicts[doc.id] || "", onValueChange: function (value) { props.setVerdict(doc.id, value); } }) : null,
         basis: open.length > 1 ? 100 / open.length : null, className: "binder-page" + (open.length > 2 ? " is-tight" : ""),
         "data-page": step, "data-step": step },
-        h(Pane, { step: step, docId: doc ? doc.id : "", entries: entriesFor(doc), more: more,
+        h(Pane, { step: step, docId: doc ? doc.id : "", entries: entriesFor(doc), more: more, lit: lit,
           onHere: function (id, moved) {
             if (moved) setActive(step);
             setHere(function (now) { if (now[step] === id) return now; var next = Object.assign({}, now); next[step] = id; return next; });
