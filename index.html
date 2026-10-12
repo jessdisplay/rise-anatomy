@@ -27,9 +27,15 @@
 .book { display: flex; flex: 1; flex-direction: column; gap: var(--spacing-s5); min-height: 0; }
 .views { display: flex; gap: var(--spacing-s2); }
 .search { position: relative; display: flex; align-items: center; gap: var(--spacing-s3); }
-.search input { width: 22rem; max-width: 60vw; background: var(--card); }
-.found { position: absolute; z-index: 30; top: calc(100% + var(--spacing-s2)); right: 0; width: min(36rem, 92vw); max-height: 70vh; overflow-y: auto; display: grid; gap: 1px; padding: var(--spacing-s3); border: 1px solid var(--tab); border-radius: var(--radius-lg); background: var(--card); font-size: max(0.9375rem, 15px); line-height: 1.4; }
+.search input { width: 26rem; max-width: 60vw; background: var(--card); }
+.found { position: absolute; z-index: 30; top: calc(100% + var(--spacing-s2)); right: 0; width: min(44rem, 92vw); max-height: 70vh; overflow-y: auto; display: grid; gap: 1px; padding: var(--spacing-s3); border: 1px solid var(--tab); border-radius: var(--radius-lg); background: var(--card); font-size: max(0.9375rem, 15px); line-height: 1.4; }
 .found .quiet { padding: var(--spacing-s3); }
+.found-help { padding: var(--spacing-s3); max-width: 60ch; }
+.chips { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s2); padding: var(--spacing-s2) var(--spacing-s3); }
+.chips .quiet { padding: 0 var(--spacing-s2) 0 0; }
+.only { display: inline-flex; align-items: center; gap: var(--spacing-s3); margin-left: auto; font-size: 0.875em; cursor: pointer; }
+.found mark { background: var(--primary-soft); color: inherit; border-radius: var(--radius-xs); }
+.hit.is-active { background: var(--tab-soft); }
 .hit { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr); gap: 0 var(--spacing-s4); padding: var(--spacing-s3); border: 0; border-radius: var(--radius-sm); background: none; font: inherit; color: var(--foreground); text-align: left; cursor: pointer; }
 .hit:hover, .hit:focus-visible { background: var(--tab-soft); }
 .hit-cite { grid-row: span 2; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--tab-soft-foreground); overflow-wrap: anywhere; }
@@ -776,10 +782,18 @@ details.part:not([open]) { gap: 0; }
 
   // ---- search: an address, a document, or words, across every binder
 
+  var TRY = ["interpreter", "referral register", "Q8"];
+
   function Search(props) {
     var q = React.useState(""), typed = q[0], setTyped = q[1];
     var r = React.useState(null), rows = r[0], setRows = r[1];
     var f = React.useState(false), focused = f[0], setFocused = f[1];
+    var p = React.useState("all"), page = p[0], setPage = p[1];    // narrow to one of the five pages
+    var o = React.useState(false), only = o[0], setOnly = o[1];    // narrow to the open binder
+    var a = React.useState(0), active = a[0], setActive = a[1];    // the result the arrow keys are on
+    var m = React.useState(12), limit = m[0], setLimit = m[1];
+    var box = React.useRef(null), panel = React.useRef(null);
+
     // The first use reads the list and keeps, for each row, everything it can be found by.
     var load = function () {
       if (!rows) read("search").then(function (list) {
@@ -787,6 +801,39 @@ details.part:not([open]) { gap: 0; }
         setRows(list);
       }, function () { setRows([]); });
     };
+
+    // A slash from anywhere on the page puts the cursor in the box.
+    React.useEffect(function () {
+      function key(event) {
+        var on = document.activeElement;
+        if (event.key !== "/" || event.metaKey || event.ctrlKey || /^(INPUT|TEXTAREA|SELECT)$/.test(on.tagName) || on.isContentEditable) return;
+        event.preventDefault();
+        if (box.current) box.current.focus();
+        setFocused(true);  // said outright: a window that is not in front moves the cursor without firing a focus event
+        load();
+      }
+      window.addEventListener("keydown", key);
+      return function () { window.removeEventListener("keydown", key); };
+    }, []);
+
+    var words = typed.trim().toLowerCase().replace(/^question (\d)/, "q$1").replace(/^column /, "col ").split(/\s+/).filter(Boolean);
+    var whole = words.join(" "), matched = [], counts = {};
+    if (rows && words.length) {
+      for (var i = 0; i < rows.length; i++) {
+        var row = rows[i], cite = row.c.toLowerCase();
+        if (only && row.k !== props.here) continue;
+        if (!words.every(function (word) { return row.h.indexOf(word) !== -1; })) continue;
+        counts[row.s] = (counts[row.s] || 0) + 1;
+        if (page !== "all" && row.s !== page) continue;
+        matched.push([(cite === whole ? 100 : 0) + (cite.slice(-whole.length - 1) === " " + whole ? 60 : 0) + (cite.indexOf(whole) !== -1 ? 30 : 0)
+          + (row.t.toLowerCase().indexOf(whole) !== -1 ? 10 : 0) + (row.h.indexOf(whole) !== -1 ? 6 : 0) + (row.k === props.here ? 5 : 0)
+          + (row.d && row.t.toLowerCase().indexOf(whole) !== -1 ? 20 : 0), i]);  // a document found by its own name comes first
+      }
+      matched.sort(function (x, y) { return y[0] - x[0] || x[1] - y[1]; });
+    }
+    var shown = matched.slice(0, limit).map(function (x) { return rows[x[1]]; });
+    var total = Object.keys(counts).reduce(function (sum, key) { return sum + counts[key]; }, 0);
+
     // The line shown for a hit: its opening words, or the words around the match when the match is further in.
     var line = function (row) {
       var opening = row.t.toLowerCase(), text = row.x || "";
@@ -797,35 +844,65 @@ details.part:not([open]) { gap: 0; }
       }
       return row.t;
     };
-    var words = typed.trim().toLowerCase().replace(/^question (\d)/, "q$1").replace(/^column /, "col ").split(/\s+/).filter(Boolean);
-    var found = [];
-    if (rows && words.length) {
-      var scored = [];
-      for (var i = 0; i < rows.length; i++) {
-        var row = rows[i], cite = row.c.toLowerCase();
-        if (!words.every(function (word) { return row.h.indexOf(word) !== -1; })) continue;
-        var whole = words.join(" ");
-        var score = (cite === whole ? 100 : 0) + (cite.slice(-whole.length - 1) === " " + whole ? 60 : 0) + (cite.indexOf(whole) !== -1 ? 30 : 0)
-          + (row.t.toLowerCase().indexOf(whole) !== -1 ? 10 : 0) + (row.h.indexOf(whole) !== -1 ? 6 : 0) + (row.k === props.here ? 5 : 0);
-        scored.push([score, i]);
-      }
-      scored.sort(function (x, y) { return y[0] - x[0] || x[1] - y[1]; });
-      found = scored.slice(0, 12).map(function (x) { return rows[x[1]]; });
+    // The searched words, marked where they sit in a line.
+    var marked = function (text) {
+      if (!words.length) return text;
+      var find = new RegExp("(" + words.map(function (word) { return word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }).join("|") + ")", "ig");
+      return text.split(find).map(function (piece, i) { return i % 2 ? h("mark", { key: i }, piece) : piece; });
+    };
+
+    var change = function (value) { setTyped(value); setActive(0); setLimit(12); setFocused(true); load(); };
+    var choose = function (row) { setTyped(""); setFocused(false); if (box.current) box.current.blur(); props.open(row); };
+    var keys = function (event) {
+      if (event.key === "ArrowDown") { event.preventDefault(); setActive(Math.min(active + 1, shown.length - 1)); }
+      else if (event.key === "ArrowUp") { event.preventDefault(); setActive(Math.max(active - 1, 0)); }
+      else if (event.key === "Escape") { setTyped(""); event.target.blur(); }
+    };
+
+    // Keep the result the arrow keys are on inside the list, without moving the page.
+    React.useEffect(function () {
+      var list = panel.current, on = list && list.querySelector(".hit.is-active");
+      if (!on) return;
+      var c = list.getBoundingClientRect(), x = on.getBoundingClientRect();
+      if (x.top < c.top) list.scrollTop += x.top - c.top - 8;
+      else if (x.bottom > c.bottom) list.scrollTop += x.bottom - c.bottom + 8;
+    }, [active]);
+
+    var chip = function (key, label, count) {
+      return h(R.Button, { key: key, type: "button", variant: "tab", size: "sm", emphasis: page === key ? "solid" : "soft", "aria-pressed": page === key,
+        onClick: function () { setPage(key); setActive(0); setLimit(12); } }, label + " " + count.toLocaleString());
+    };
+    var body = null;
+    if (focused && !words.length) {
+      body = h("div", { className: "found", ref: panel },
+        h("p", { className: "found-help" }, "Type words, a document's name, or an address. Search reads every word of every part, in every binder."),
+        h("div", { className: "chips" }, h("span", { className: "quiet" }, "Try"), TRY.map(function (example) {
+          return h(R.Button, { key: example, type: "button", variant: "tab", size: "sm", emphasis: "soft", onClick: function () { change(example); if (box.current) box.current.focus(); } }, example);
+        })),
+        h("p", { className: "quiet" }, "Press / from anywhere to search. The arrow keys move through results and Enter opens one."));
+    } else if (focused) {
+      body = h("div", { className: "found", ref: panel, role: "listbox", "aria-label": "Search results" },
+        !rows ? h("p", { className: "quiet" }, "Reading the library.") : h(React.Fragment, null,
+          h("div", { className: "chips" },
+            chip("all", "All", total),
+            props.steps.filter(function (step) { return counts[step.key]; }).map(function (step) { return chip(step.key, step.label, counts[step.key]); }),
+            h("label", { className: "only" }, h(R.Checkbox, { id: "only", checked: only, onCheckedChange: function (on) { setOnly(!!on); setActive(0); } }), h("span", null, "This binder only"))),
+          !shown.length ? h("p", { className: "quiet" }, "Nothing matches that" + (only ? " in this binder." : page !== "all" ? " on this kind of page." : "."))
+          : shown.map(function (row, i) {
+              return h("button", { type: "button", role: "option", "aria-selected": i === active, key: row.k + row.c + i, className: "hit" + (i === active ? " is-active" : ""),
+                onMouseEnter: function () { setActive(i); }, onClick: function () { choose(row); } },
+                h("span", { className: "hit-cite" }, marked(row.c)), h("span", { className: "hit-text" }, marked(line(row))), h("span", { className: "hit-where" }, row.w));
+            }),
+          matched.length > shown.length ? h("div", { className: "chips" },
+            h("span", { className: "quiet" }, "Showing " + shown.length + " of " + matched.length.toLocaleString()),
+            h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setLimit(limit + 24); } }, "Show more")) : null));
     }
-    var choose = function (row) { setTyped(""); setFocused(false); props.open(row); };
-    return h("form", { className: "search", role: "search", onSubmit: function (e) { e.preventDefault(); if (found[0]) choose(found[0]); },
+    return h("form", { className: "search", role: "search", onSubmit: function (e) { e.preventDefault(); if (shown[active]) choose(shown[active]); },
       onBlur: function (e) { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); } },
       h(R.Label, { htmlFor: "search" }, "Search"),
-      h(R.Input, { id: "search", type: "text", value: typed, autoComplete: "off", placeholder: "Words, a document, or an address such as Q8",
-        onFocus: function () { setFocused(true); load(); }, onChange: function (e) { setTyped(e.target.value); setFocused(true); load(); },
-        onKeyDown: function (e) { if (e.key === "Escape") { setTyped(""); e.target.blur(); } } }),
-      focused && words.length ? h("div", { className: "found", role: "listbox", "aria-label": "Search results" },
-        !rows ? h("p", { className: "quiet" }, "Reading the library.")
-        : !found.length ? h("p", { className: "quiet" }, "Nothing in the library matches that.")
-        : found.map(function (row, i) {
-            return h("button", { type: "button", role: "option", key: i, className: "hit", onClick: function () { choose(row); } },
-              h("span", { className: "hit-cite" }, row.c), h("span", { className: "hit-text" }, line(row)), h("span", { className: "hit-where" }, row.w));
-          })) : null);
+      h(R.Input, { id: "search", ref: box, type: "text", value: typed, autoComplete: "off", placeholder: "Search every document. Press /",
+        onFocus: function () { setFocused(true); load(); }, onChange: function (e) { change(e.target.value); }, onKeyDown: keys }),
+      body);
   }
 
   // ---- the frame: which binder, which view
@@ -877,7 +954,7 @@ details.part:not([open]) { gap: 0; }
           h("div", { className: "views" },
             h(R.Button, { variant: "tab", size: "sm", emphasis: view === "binder" ? "solid" : "soft", "aria-pressed": view === "binder", onClick: function () { setView("binder"); } }, "Binder"),
             h(R.Button, { variant: "tab", size: "sm", emphasis: view === "table" ? "solid" : "soft", "aria-pressed": view === "table", onClick: function () { setView("table"); } }, "All documents")),
-          h(Search, { here: key, open: function (row) {
+          h(Search, { here: key, steps: lib.steps, open: function (row) {
             var doc = row.a.split(" ").slice(0, row.a.charAt(0) === "s" ? 2 : 1).join(" ");
             var stay = data && (data.where[row.a] || data.where[doc]);
             openAt(stay ? key : row.k, row.p ? { part: row.p, step: lib.docs[doc] ? lib.docs[doc].step : "legislation", doc: doc } : { address: row.a });
