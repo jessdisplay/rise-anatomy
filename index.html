@@ -164,6 +164,16 @@ details.part:not([open]) { gap: 0; }
 .guide-over { padding: 0 var(--spacing-s3); font-size: 0.8125em; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); }
 .guide-title { padding: 0 var(--spacing-s3) var(--spacing-s3); font-weight: 600; }
 .guide-page > .guide-what { padding: 0 var(--spacing-s3); }
+/* ---- one row of a register, read as a record: the same fields, listed down the page */
+.reg tr.is-row { cursor: pointer; }
+.reg tr.is-row:hover td, .reg tr.is-open td { background: var(--tab-subtle); }
+.record { display: grid; gap: var(--spacing-s5); padding: var(--spacing-s5) var(--spacing-s6); border: 1px solid var(--border); border-radius: var(--radius-lg); }
+.record-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-s3); }
+.record-head h4 { font-size: 1.125em; font-weight: 600; }
+.record-fields { columns: 24rem; column-gap: var(--spacing-s8); }
+.record-fields > div { break-inside: avoid; padding-block: var(--spacing-s3); border-top: 1px solid var(--border); }
+.record-fields dt { font-size: max(0.875em, 14px); color: var(--muted-foreground); }
+.record-fields dd { max-width: none; }
 /* ---- the trace: one statement, and every place it is carried on the other pages */
 .doc .item { cursor: pointer; }
 .doc .item:hover { background: var(--muted); }
@@ -439,6 +449,9 @@ details.part:not([open]) { gap: 0; }
       return G.sheets.length < 2 || !x.row.kind || sheet.name.toLowerCase().indexOf(x.row.kind.split(" ")[0]) === 0;
     });
     var picked = G.columns.filter(function (c) { return c.letter === props.column; })[0];
+    // A register is too wide to read across. One row opens as a record: its fields listed down the page.
+    var ro = React.useState(null), opened = ro[0], setOpened = ro[1];
+    var record = rows.filter(function (x) { return x.i === opened; })[0];
     var block = function (name, text) { return h(Part, { part: partNamed(G.parts, name) }, h("div", Object.assign({ className: "plain" }, html(text)))); };
     return h("div", { className: "doc is-wide" },
       block("What this proves", G.proves),
@@ -456,11 +469,21 @@ details.part:not([open]) { gap: 0; }
           }))),
           h("tbody", null,
             rows.map(function (x) {
-              return h("tr", { key: x.i, id: "row-" + props.doc.id + "-" + x.i, className: x.row.example ? "example" : undefined },
+              var toggle = function () { setOpened(opened === x.i ? null : x.i); };
+              return h("tr", { key: x.i, id: "row-" + props.doc.id + "-" + x.i, className: "is-row" + (x.row.example ? " example" : "") + (opened === x.i ? " is-open" : ""),
+                tabIndex: 0, "aria-expanded": opened === x.i, onClick: toggle, onKeyDown: function (event) { if (event.key === "Enter") toggle(); } },
                 columns.map(function (c) { return h("td", { key: c.letter }, x.row.cells[c.letter] || ""); }));
             }),
             [0, 1].map(function (i) { return h("tr", { key: "blank" + i }, columns.map(function (c) { return h("td", { key: c.letter }, ""); })); })))),
-        h("p", { className: "quiet" }, rows.length + (rows.length === 1 ? " row" : " rows") + " on this sheet. Saving a form that feeds this register adds one. Select a column heading to see what it holds."),
+        h("p", { className: "quiet" }, rows.length + (rows.length === 1 ? " row" : " rows") + " on this sheet. Saving a form that feeds this register adds one. Select a row to read it as a record, or a column heading to see what it holds."),
+        record ? h("div", { className: "record" },
+          h("div", { className: "record-head" },
+            h("h4", null, "Record " + (rows.indexOf(record) + 1) + " of " + rows.length + (record.row.example ? " (example)" : "")),
+            h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setOpened(null); } }, "Back to the table")),
+          h("dl", { className: "record-fields" }, columns.map(function (c) {
+            return h("div", { key: c.letter }, h("dt", null, "Col " + c.letter + ", " + c.name),
+              h("dd", null, record.row.cells[c.letter] || h("span", { className: "quiet" }, "Not filled")));
+          }))) : null,
         picked ? h("div", { className: "col-card" },
           h("h4", null, "Col " + picked.letter + ": " + picked.name),
           h("p", html(picked.meaning)),
