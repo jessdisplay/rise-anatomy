@@ -36,6 +36,8 @@
 .hit-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .hit-where { font-size: 0.875em; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .all-docs { flex: 1; min-height: 0; overflow: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--spacing-s6); font-size: max(0.9375rem, 15px); }
+.badges { display: inline-flex; flex-wrap: wrap; gap: var(--spacing-s2); }
+.off-note { max-width: 60rem; padding: var(--spacing-s3) var(--spacing-s4); border-left: 3px solid var(--warning-solid); background: var(--warning-subtle); font-size: max(0.875rem, 14px); line-height: 1.5; }
 .step-table { font-size: max(0.9375rem, 15px); overflow-x: auto; }
 .scopes { display: flex; flex-wrap: wrap; gap: var(--spacing-s2); margin-bottom: var(--spacing-s4); }
 .subs { list-style: none; display: grid; gap: var(--spacing-s2); padding-left: 0; margin-top: var(--spacing-s2); }
@@ -349,6 +351,7 @@ details.part:not([open]) { gap: 0; }
         h(R.Button, { variant: "neutral", emphasis: "outline", onClick: function () { props.setAnswers(exampleAnswers(F, kind)); } }, "Fill with example answers")),
       props.saved ? h("p", { className: "saved", role: "status" }, props.saved) : null,
       h(Part, { part: partNamed(F.parts, "After you submit") }, h("div", Object.assign({ className: "plain" }, html(F.after)))),
+      F.extras.map(function (x) { return h(Part, { part: x.part, key: x.part.id }, h("div", Object.assign({ className: "plain" }, html(x.html)))); }),
       h(Part, { part: partNamed(F.parts, "Control") }, h("div", Object.assign({ className: "plain" }, html(F.control)))));
   }
 
@@ -391,7 +394,9 @@ details.part:not([open]) { gap: 0; }
             h("div", null, h("dt", null, "Indicator"), h("dd", html(picked.indicator))),
             h("div", null, h("dt", null, "Required"), h("dd", null, picked.required))),
           picked.trail ? h("div", html(picked.trail)) : null) : null),
-      block("Entry rules", G.entry), block("How we review", G.review), block("Who can see it", G.see), block("Rows", G.rows), block("Control", G.control));
+      block("Entry rules", G.entry), block("How we review", G.review), block("Who can see it", G.see), block("Rows", G.rows),
+      G.extras.map(function (x) { return h(Part, { part: x.part, key: x.part.id }, h("div", Object.assign({ className: "plain" }, html(x.html)))); }),
+      block("Control", G.control));
   }
 
   // ---- one page's frame: controls, the sheet, and the index beside it
@@ -673,7 +678,8 @@ details.part:not([open]) { gap: 0; }
     function stepTable(step) {
       var label = lib.steps.filter(function (x) { return x.key === step; })[0].label.toLowerCase();
       var list = docsOf(step).map(function (doc) {
-        return { id: doc.id, cells: { doc: doc.id, title: doc.title, words: doc.words.toLocaleString(), status: h(R.Badge, { tone: "neutral", size: "sm" }, "Offered, not adopted"),
+        return { id: doc.id, cells: { doc: doc.id, title: doc.title, words: doc.words.toLocaleString(),
+          status: h("span", { className: "badges" }, h(R.Badge, { tone: "neutral", size: "sm" }, "Offered, not adopted"), doc.off ? h(R.Badge, { tone: "warning", size: "sm", title: doc.off }, "Outside the anatomy") : null),
           open: h(R.Button, { variant: "neutral", emphasis: "link", size: "sm", "data-open": step + "|" + doc.id }, "View document") } };
       }).concat(data.steps[step].unread.map(function (doc) {
         return { id: doc.id, cells: { doc: doc.id, title: doc.title, words: "", status: h(R.Badge, { tone: "warning", size: "sm" }, "Could not be read"), open: h("span", { className: "quiet" }, doc.problem) } };
@@ -700,6 +706,7 @@ details.part:not([open]) { gap: 0; }
         h(R.Icon, { name: "table" }), "All " + all + " " + label.toLowerCase()) : null;
       return h(R.DocumentPage, { key: "page-" + step, id: "top-" + step, bare: true, titleClassName: "text-h2",
         title: doc ? doc.title : label, subtitle: doc ? doc.subtitle : all + (all === 1 ? " document" : " documents") + " for this standard at 0.3.0",
+        statusSlot: doc && doc.off ? h("p", { className: "off-note" }, doc.off) : null,
         basis: open.length > 1 ? 100 / open.length : null, className: "binder-page" + (open.length > 2 ? " is-tight" : ""),
         "data-page": step, "data-step": step },
         h(Pane, { step: step, docId: doc ? doc.id : "", entries: entriesFor(doc), binderRows: binderRows, libraryRows: libraryRows, more: more,
@@ -756,7 +763,7 @@ details.part:not([open]) { gap: 0; }
         return { id: id, cells: { doc: id, title: doc.title, page: step[doc.step], standard: home.index + "  " + home.heading,
           also: doc.binders.length > 1 ? "and " + (doc.binders.length - 1) + " more" : "",
           words: doc.words == null ? "" : doc.words.toLocaleString(),
-          status: h(R.Badge, { tone: doc.problem ? "warning" : "neutral", size: "sm" }, doc.status),
+          status: h("span", { className: "badges" }, h(R.Badge, { tone: doc.problem ? "warning" : "neutral", size: "sm" }, doc.status), doc.off ? h(R.Badge, { tone: "warning", size: "sm", title: doc.off }, "Outside the anatomy") : null),
           open: doc.problem ? h("span", { className: "quiet" }, doc.problem)
             : h(R.Button, { variant: "neutral", emphasis: "link", size: "sm", onClick: function () { props.open(doc.home, id); } }, "View document") } };
       }) };
