@@ -1550,6 +1550,12 @@ details.part:not([open]) { gap: 0; }
 
   // ---- the frame: which binder, which view
 
+  // A platform screen that frames this page has already decided who it is guiding: there the
+  // sign in sets the view and nobody chooses. It says so with ?view=provider or ?view=auditor,
+  // and the choice then leaves the bar. Any other address keeps the choice on the page.
+  var asked = new URLSearchParams(window.location.search).get("view");
+  var given = asked === "provider" || asked === "auditor" ? asked : null;
+
   function App() {
     var l = React.useState(null), lib = l[0], setLib = l[1];
     var k = React.useState(null), key = k[0], setKey = k[1];
@@ -1558,7 +1564,7 @@ details.part:not([open]) { gap: 0; }
     var v = React.useState("binder"), view = v[0], setView = v[1];
     var a = React.useState(null), arrive = a[0], setArrive = a[1];
     var c = React.useState(false), colour = c[0], setColour = c[1];
-    var m = React.useState("provider"), mode = m[0], setMode = m[1];  // who the page is guiding
+    var m = React.useState(given || "provider"), mode = m[0], setMode = m[1];  // who the page is guiding
     var ly = React.useState("one"), layout = ly[0], setLayout = ly[1];  // the way of working chosen: one page at a time, or pages side by side
     var t = React.useState(false), tools = t[0], setTools = t[1];   // the extras for judging the design itself
     var vd = React.useState({}), verdicts = vd[0], setVerdicts = vd[1];
@@ -1631,7 +1637,7 @@ details.part:not([open]) { gap: 0; }
       h("header", { className: "bar" },
         h(R.RiseWordmark, { className: "mark" }),
         h("div", { className: "bar-tools" },
-          h("label", { className: "view-as" }, h("span", null, "View as"),
+          given ? null : h("label", { className: "view-as" }, h("span", null, "View as"),
             h("select", { value: mode, onChange: function (event) { setMode(event.target.value); } },
               h("option", { value: "provider" }, "Provider"), h("option", { value: "auditor" }, "Auditor"))),
           h(Seg, { label: "What is shown", value: view, options: [["binder", "Binder"], ["table", "All documents"]], onChange: setView }),
