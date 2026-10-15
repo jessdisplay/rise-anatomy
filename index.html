@@ -1373,7 +1373,7 @@ details.part:not([open]) { gap: 0; }
     }, [offer]);
 
     return h("div", { className: "book", onClick: onClick, onMouseUp: onSweep, ref: book },
-      h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, layout, pills,
+      h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, props.controls, layout, pills,
         guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
           h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
       h("div", { className: "book-row" + (guide && size === "full" ? " is-full" : "") },
@@ -1633,19 +1633,26 @@ details.part:not([open]) { gap: 0; }
 
     if (failed) return h("p", { className: "loading" }, "The library could not be read: " + failed + ". Reload the page to try again.");
     if (!lib) return h("p", { className: "loading" }, "Loading the library.");
-    return h("div", { className: "frame is-" + mode + (tools ? " has-tools" : "") + (colour && tools ? " colour-on" : "") },
-      h("header", { className: "bar" },
+    var shown = h(Seg, { key: "shown", label: "What is shown", value: view, options: [["binder", "Binder"], ["table", "All documents"]], onChange: setView });
+    var search = h(Search, { key: "search", here: key, steps: lib.steps, open: function (row) {
+      var doc = row.a.split(" ").slice(0, row.a.charAt(0) === "s" ? 2 : 1).join(" ");
+      var stay = data && (data.where[row.a] || data.where[doc]);
+      openAt(stay ? key : row.k, row.p ? { part: row.p, step: lib.docs[doc] ? lib.docs[doc].step : "legislation", doc: doc } : { address: row.a });
+    } });
+    // Framed by a platform screen, the page brings no bar of its own: the platform's header is the
+    // only one (Jesse, 15 Oct: the bar read as "a second menu"). The two controls a reader needs,
+    // what is shown and search, join the book's own row; the wordmark and the design tools stay
+    // on the page's own address, where they belong.
+    var framedControls = given ? [shown, search] : null;
+    return h("div", { className: "frame is-" + mode + (given ? " is-framed" : "") + (tools ? " has-tools" : "") + (colour && tools ? " colour-on" : "") },
+      given ? null : h("header", { className: "bar" },
         h(R.RiseWordmark, { className: "mark" }),
         h("div", { className: "bar-tools" },
-          given ? null : h("label", { className: "view-as" }, h("span", null, "View as"),
+          h("label", { className: "view-as" }, h("span", null, "View as"),
             h("select", { value: mode, onChange: function (event) { setMode(event.target.value); } },
               h("option", { value: "provider" }, "Provider"), h("option", { value: "auditor" }, "Auditor"))),
-          h(Seg, { label: "What is shown", value: view, options: [["binder", "Binder"], ["table", "All documents"]], onChange: setView }),
-          h(Search, { here: key, steps: lib.steps, open: function (row) {
-            var doc = row.a.split(" ").slice(0, row.a.charAt(0) === "s" ? 2 : 1).join(" ");
-            var stay = data && (data.where[row.a] || data.where[doc]);
-            openAt(stay ? key : row.k, row.p ? { part: row.p, step: lib.docs[doc] ? lib.docs[doc].step : "legislation", doc: doc } : { address: row.a });
-          } }),
+          shown,
+          search,
           h("div", { className: "switch" },
             h(R.Checkbox, { id: "tools", checked: tools, onCheckedChange: function (on) { setTools(!!on); } }),
             h(R.Label, { htmlFor: "tools" }, "Design tools")),
@@ -1654,9 +1661,12 @@ details.part:not([open]) { gap: 0; }
             h(R.Label, { htmlFor: "colour" }, "Colour by page")) : null,
           tools ? h("a", { href: "anatomy.html" }, "Anatomy and open rulings") : null)),
       h("main", { className: "work" },
-        view === "table" ? h(AllDocuments, { lib: lib, verdicts: verdicts, open: function (binder, id) { openAt(binder, { address: id }); } })
+        view === "table" ? h(React.Fragment, null,
+          framedControls ? h("div", { className: "stage-row" }, h("div", { className: "pills" }, framedControls)) : null,
+          h(AllDocuments, { lib: lib, verdicts: verdicts, open: function (binder, id) { openAt(binder, { address: id }); } }))
         : !data ? h("p", { className: "loading" }, "Opening the binder.")
         : h(Book, { key: data.key, data: data, lib: lib, mode: mode, layout: layout, setLayout: setLayout, tools: tools, verdicts: verdicts, setVerdict: setVerdict,
+            controls: framedControls,
             notes: notes, noteActs: noteActs,
             arrive: arrive, leave: leave,
             openBinder: function (binder, address) { openAt(binder, address ? { address: address } : null); } })));
