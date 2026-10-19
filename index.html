@@ -65,6 +65,7 @@
 .doc ol.subs { list-style: none; padding-left: 0; }
 .subs > li { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); }
 .stage-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-s4) var(--spacing-s5); }
+.stage-left { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s3) var(--spacing-s5); }
 .pills { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s3); }
 .work { display: flex; flex: 1; flex-direction: column; gap: var(--spacing-s5); min-height: 0; width: 100%; padding: var(--spacing-s6) var(--spacing-s7) var(--spacing-s7); }
 .binder-page { min-width: 0; }
@@ -302,6 +303,12 @@ details.part:not([open]) { gap: 0; }
 .colour-on a.go[data-step]::before { content: ""; display: inline-block; width: 0.5rem; height: 0.5rem; margin-right: 0.3em; border-radius: var(--radius-full); background: var(--page); }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+
+/* No shadows, as in the platform (riseOS-FE docs/design-system/LAYERING.md: depth is background
+ * and a border). The bundled component styles predate that rule and still draw shadow-xs on
+ * fields and shadow-md on the comment box. Only the shadow layer is cleared: focus rings, which
+ * use the same property, stay (Jesse, 19 Oct: "remove box shadows"). */
+*, ::before, ::after { --tw-shadow: 0 0 transparent !important; --tw-inset-shadow: 0 0 transparent !important; }
 </style>
 </head>
 <body>
@@ -888,6 +895,11 @@ details.part:not([open]) { gap: 0; }
     var sz = React.useState("side"), size = sz[0], setSize = sz[1];    // how much of the window the guide takes: side, half or full
     var pd = React.useState(null), pending = pd[0], setPending = pd[1];  // a comment's place to go back to, once its page is drawn
     var ak = React.useState(null), ask = ak[0], setAsk = ak[1];          // the guide asked to show a part of itself, such as the comments
+    // Where the reader was before each jump, newest last, so Back returns them exactly there: the same
+    // pages, the same documents, the same scroll on each page and the same selection (Jesse, 19 Oct: "how can
+    // we go back once pressing a button and having it move").
+    var bk = React.useState([]), hops = bk[0], setHops = bk[1];
+    var rs = React.useState(null), restoring = rs[0], setRestoring = rs[1];  // scroll positions to put back once drawn
     // Open comments on a document: on the document as a whole, and on any statement or line in it.
     function openNotesOn(docId) {
       return Object.keys(props.notes).reduce(function (sum, address) {
@@ -952,6 +964,45 @@ details.part:not([open]) { gap: 0; }
         }
         return next;
       });
+    }
+
+    // Remember where the reader is now, under a name for the Back button.
+    function remember(label) {
+      var scroll = {};
+      open.forEach(function (step) {
+        var box = book.current && book.current.querySelector('[data-page="' + step + '"]');
+        if (box) scroll[step] = box.scrollTop;
+      });
+      setHops(function (now) { return now.concat({ open: open.slice(), picked: Object.assign({}, picked), active: active, trace: trace, scroll: scroll, label: label }).slice(-50); });
+      try { window.history.pushState({ riseHop: true }, ""); } catch (ignored) { /* a sandboxed frame may refuse; the Back button still works */ }
+    }
+    // Back: the last place remembered, exactly as it was.
+    function goBack() {
+      var last = hops[hops.length - 1];
+      if (!last) return;
+      setHops(hops.slice(0, -1));
+      setOpen(last.open); setPicked(last.picked); setActive(last.active); setTrace(last.trace);
+      setRestoring({ scroll: last.scroll, n: Date.now() });
+    }
+    var backRef = React.useRef(goBack);
+    React.useEffect(function () { backRef.current = goBack; });
+    // The browser's own Back steps back through the jumps too, before it leaves the page.
+    React.useEffect(function () {
+      function onPop() { backRef.current(); }
+      window.addEventListener("popstate", onPop);
+      return function () { window.removeEventListener("popstate", onPop); };
+    }, []);
+    React.useEffect(function () {
+      if (!restoring || !book.current) return;
+      Object.keys(restoring.scroll).forEach(function (step) {
+        var box = book.current.querySelector('[data-page="' + step + '"]');
+        if (box) box.scrollTop = restoring.scroll[step];
+      });
+    }, [restoring && restoring.n]);
+    // Close one page of the row; Back opens it again.
+    function closePage(step) {
+      remember(lib.steps[STEPS.indexOf(step)].label);
+      setOpen(open.filter(function (s) { return s !== step; }));
     }
 
     function only(step) { setActive(step); setOpen([step]); }
@@ -1029,9 +1080,12 @@ details.part:not([open]) { gap: 0; }
       var base = starts[0], said = starts.length ? data.where[base].cite : "";
       if (!starts.length) {
         var doc = docOf(step, picked[step]), entry = doc && doc.index.filter(function (e) { return e.id === id; })[0];
-        if (!entry) return;
-        base = doc.id + " part " + entry.short;
-        said = lib.steps.filter(function (x) { return x.key === step; })[0].label + ", part " + entry.short + " (" + entry.label + ")";
+        if (!doc) return;
+        // A section the index does not list still takes a comment on the words highlighted in it: the
+        // offer of a comment must never lead nowhere (Jesse, 19 Oct: "from here you should be able to add comments").
+        var heading = holder.querySelector("summary, h3, h4"), step_ = lib.steps.filter(function (x) { return x.key === step; })[0].label;
+        base = doc.id + (entry ? " part " + entry.short : " " + id);
+        said = step_ + (entry ? ", part " + entry.short + " (" + entry.label + ")" : ", " + (heading ? heading.textContent.trim() : "this section"));
       }
       var seen = {}, hits = [];
       starts.forEach(function (address) { seen[address] = true; });
@@ -1172,7 +1226,9 @@ details.part:not([open]) { gap: 0; }
         }
         if (link.dataset.jump) { setLit({ id: link.dataset.jump, n: Date.now() }); return; }
         var page = link.closest("[data-page]") || (link.closest(".guide-page") ? { dataset: { page: trace ? trace.step : current } } : null);
-        go(link.dataset.go, page ? page.dataset.page : null);
+        var from = page ? page.dataset.page : null;
+        remember(trace ? trace.cite : from ? lib.steps[STEPS.indexOf(from)].label : "where you were");
+        go(link.dataset.go, from);
         return;
       }
       // Selecting a statement, or a line of one, traces it. Controls, and text being selected to copy, are left alone.
@@ -1274,7 +1330,9 @@ details.part:not([open]) { gap: 0; }
           h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { commentOn(step, doc, label); } },
             h(R.Icon, { name: "comment" }), "Comment"),
           step !== "legislation"
-            ? h(R.ConformanceControl, { value: props.verdicts[doc.id] || "", onValueChange: function (value) { props.setVerdict(doc.id, value); } }) : null) : null,
+            ? h(R.ConformanceControl, { value: props.verdicts[doc.id] || "", onValueChange: function (value) { props.setVerdict(doc.id, value); } }) : null,
+          open.length > 1 ? h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", className: "page-close",
+            "aria-label": "Close the " + label + " page", title: "Close this page", onClick: function () { closePage(step); } }, h(R.Icon, { name: "close" })) : null) : null,
         basis: open.length > 1 ? 100 / open.length : null, className: "binder-page" + (open.length > 2 ? " is-tight" : ""),
         "data-page": step, "data-step": step },
         h(Pane, { step: step, docId: doc ? doc.id : "", entries: entriesFor(doc), more: more, lit: lit,
@@ -1411,7 +1469,10 @@ details.part:not([open]) { gap: 0; }
     }, [offer]);
 
     return h("div", { className: "book", onClick: onClick, onMouseUp: onSweep, ref: book },
-      h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, props.controls, layout, pills, addPage,
+      h("div", { className: "stage-row" }, h("div", { className: "stage-left" }, trail,
+        hops.length ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "back-hop", onClick: goBack },
+          h(R.Icon, { name: "arrow-left" }), "Back to " + hops[hops.length - 1].label) : null),
+        h("div", { className: "pills" }, props.controls, layout, pills, addPage,
         guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
           h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
       h("div", { className: "book-row" + (guide && size === "full" ? " is-full" : "") },
