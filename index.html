@@ -199,7 +199,7 @@ details.part:not([open]) { gap: 0; }
 .walk .walk-next { flex: 1; min-width: 0; justify-content: space-between; }
 .walk-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tally { padding: 0 var(--spacing-s4) var(--spacing-s4); border-bottom: 1px solid var(--border); }
-.guide-list { flex: 0 1 auto; min-height: 0; max-height: 50%; overflow-y: auto; padding: var(--spacing-s3); display: grid; gap: var(--spacing-s3); align-content: start; }
+.guide-list { flex: 0 1 auto; min-height: 0; max-height: 50%; overflow-y: auto; padding: var(--spacing-s3); border-top: 1px solid var(--border); display: grid; gap: var(--spacing-s3); align-content: start; }
 .guide-step { display: grid; gap: 1px; }
 .guide-row { display: flex; align-items: center; gap: var(--spacing-s3); padding: var(--spacing-s3); border-radius: var(--radius-sm); color: var(--foreground); text-decoration: none; }
 .guide-row:hover { background: var(--muted); }
@@ -212,9 +212,11 @@ details.part:not([open]) { gap: 0; }
 .guide-row.is-doc { padding-left: calc(var(--spacing-s3) + 1.625rem + var(--spacing-s3)); }
 .guide-row.is-current { background: var(--tab-soft); font-weight: 600; }
 .guide-page { display: flex; flex-direction: column; flex: 1 1 0; min-height: 10rem; border-top: 1px solid var(--border); }
-.guide-page-head { flex: none; display: grid; gap: var(--spacing-s2); padding: var(--spacing-s4) var(--spacing-s3) var(--spacing-s2); }
+/* The lower half's heading holds still with a clear edge under it, so rows scrolling beneath it read as a
+ * list moving, not as text breaking (Jesse, 19 Oct: "breaking here again"). */
+.guide-page-head { flex: none; display: grid; gap: var(--spacing-s2); padding: var(--spacing-s4) var(--spacing-s3) var(--spacing-s3); border-bottom: 1px solid var(--border); }
 .guide-page-head > .seg { justify-self: start; margin-left: var(--spacing-s3); }
-.guide-page-body { flex: 1; min-height: 0; overflow-y: auto; padding: 0 var(--spacing-s3) var(--spacing-s4); }
+.guide-page-body { flex: 1; min-height: 0; overflow-y: auto; padding: var(--spacing-s3) var(--spacing-s3) var(--spacing-s4); scroll-padding-top: var(--spacing-s3); }
 .guide-over { padding: 0 var(--spacing-s3); font-size: 0.8125em; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-foreground); }
 .guide-title { padding: 0 var(--spacing-s3) var(--spacing-s3); font-weight: 600; }
 .guide-page-body > .guide-what { padding: 0 var(--spacing-s3); }
@@ -374,6 +376,9 @@ details.part:not([open]) { gap: 0; }
 .check-sec dt { color: var(--muted-foreground); }
 .check-sec dd { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 47.99rem) { .form-progress { grid-template-columns: 1fr; } .check-sec dl > div { grid-template-columns: 1fr; gap: var(--spacing-s1); } }
+/* The module and standard names open their menus too. */
+[data-slot="breadcrumb-item"] > a { cursor: pointer; }
+[data-slot="breadcrumb-item"] > a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 </style>
 </head>
 <body>
@@ -769,7 +774,7 @@ details.part:not([open]) { gap: 0; }
     lib.steps.forEach(function (step) { if (step.key !== "legislation") judged = judged.concat(props.docsOf(step.key)); });
     var count = { conforms: 0, "non-conforming": 0, none: 0 };
     judged.forEach(function (doc) { count[props.verdicts[doc.id] || "none"] += 1; });
-    var tally = [["all", "All " + judged.length], ["conforms", "Conform " + count.conforms], ["non-conforming", "Do not " + count["non-conforming"]], ["none", "Not checked " + count.none]];
+    var tally = [["all", "All " + judged.length], ["conforms", "Conforms " + count.conforms], ["non-conforming", "Doesn't conform " + count["non-conforming"]], ["none", "Not checked " + count.none]];
     var zo = React.useState("index"), zone = zo[0], setZone = zo[1];  // what the lower half holds while nothing is selected
     // A page's "Comments" button asks for the comments to be shown (Jesse, 19 Oct: "in the side by side where is the comments").
     React.useEffect(function () {
@@ -793,6 +798,16 @@ details.part:not([open]) { gap: 0; }
     };
     React.useEffect(function () { setShown({}); if (index.current) index.current.scrollTop = 0; }, [trace && trace.n]);
 
+    // Keep the document being read fully in sight in the list above, moving only the list's own scroller.
+    var list = React.useRef(null);
+    React.useEffect(function () {
+      var box = list.current, row = box && box.querySelector(".guide-row.is-doc.is-current, .guide-row.is-step.is-current");
+      if (!row) return;
+      var top = row.getBoundingClientRect().top - box.getBoundingClientRect().top;
+      if (top < 0) box.scrollTop += top - 8;
+      else if (top + row.offsetHeight > box.clientHeight) box.scrollTop += top + row.offsetHeight - box.clientHeight + 8;
+    }, [props.current, props.picked && props.picked[props.current]]);
+
     // Keep the part being read in sight in the index, moving only the index's own scroller.
     React.useEffect(function () {
       var box = index.current, row = box && box.querySelector(".is-here");
@@ -815,7 +830,7 @@ details.part:not([open]) { gap: 0; }
         replying === t.id ? h(R.CommentComposer, { className: "w-full", submitLabel: "Reply", placeholder: "Write a reply",
           onSubmit: function (text) { props.noteActs.add(address, text, t.id, null); setReplying(null); }, onCancel: function () { setReplying(null); } }) : null);
     };
-    var sizes = [["side", "Side"], ["half", "Half"], ["full", "Full"]], full = props.size === "full";
+    var sizes = [["side", "Narrow"], ["half", "Wide"], ["full", "Full"]], full = props.size === "full";
     var live = board.filter(function (x) { return !x.t.resolved; }).length;
     var said = board.length ? live + " open of " + board.length : "No comments yet";
     var notes = [
@@ -831,7 +846,7 @@ details.part:not([open]) { gap: 0; }
     var choose = h(Seg, { label: "What this half of the guide shows", value: zone, options: [["index", "On this page"], ["comments", "Comments" + (live ? " " + live : "")]], onChange: setZone });
     var head, body;
     if (trace) {
-      head = [h("div", { className: "trace-head", key: "over" }, h("p", { className: "guide-over" }, trace.about === "document" ? "This document" : trace.span ? "Highlighted words" : "Selected statement"),
+      head = [h("div", { className: "trace-head", key: "over" }, h("p", { className: "guide-over" }, trace.about === "document" ? "This document" : trace.span ? "Highlighted words" : "What you selected"),
           h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: props.clearTrace }, "Back")),
         h("p", { className: "guide-title", key: "title" }, trace.cite)];
       body = [trace.label ? h("p", { className: "guide-what trace-said", key: "said" }, trace.label) : null,
@@ -839,14 +854,14 @@ details.part:not([open]) { gap: 0; }
           h("p", { className: "trace-name" }, h("strong", null, "Comments")),
           threads.map(function (t) { return card(trace.address, t); }),
           h(R.CommentComposer, { key: trace.id + trace.line + (trace.span || "") + draft, className: "w-full", autoFocus: trace.about === "document" || !!trace.span, submitLabel: "Comment",
-            placeholder: trace.about === "document" ? "Comment on this document" : "Comment on this statement",
+            placeholder: trace.about === "document" ? "Write a comment on this document" : "Write a comment on this",
             onSubmit: function (text) {
               props.noteActs.add(trace.address, text, null, { holder: trace.id, line: trace.line, step: trace.step, doc: props.picked[trace.step],
                 span: trace.span, cite: trace.cite, said: trace.label, about: trace.about || "" });
               setDraft(draft + 1);
             },
             onCancel: function () { setDraft(draft + 1); } })),
-        trace.about === "document" ? null : h("p", { className: "trace-name trace-where", key: "where" }, h("strong", null, "Where it appears")),
+        trace.about === "document" ? null : h("p", { className: "trace-name trace-where", key: "where" }, h("strong", null, "Linked to")),
         trace.about === "document" ? h("p", { className: "trace-quiet trace-where", key: "how" }, "To comment on one statement, or a single line of one, select it in the document.")
         : trace.loose ? h("p", { className: "trace-quiet", key: "loose" }, "This line sits outside the numbered statements, so nothing is linked to it. It can still take comments.")
         : trace.whole ? h("p", { className: "trace-quiet", key: "whole" }, "Links are kept for the whole statement, " + trace.whole + ".") : null,
@@ -879,7 +894,7 @@ details.part:not([open]) { gap: 0; }
       body = notes;
     } else {
       head = [h(React.Fragment, { key: "choose" }, choose), h("p", { className: "guide-title", key: "title" }, doc ? doc.title : reading.label)];
-      body = [doc ? h("p", { className: "guide-what trace-hint", key: "hint" }, "Select a statement, or one line of it, to comment on it or see where else it appears.")
+      body = [doc ? h("p", { className: "guide-what trace-hint", key: "hint" }, "Tap a numbered paragraph to comment on it or see what it links to. You can also highlight words to comment on them.")
           : h("p", { className: "guide-what", key: "hint" }, "Choose a document from the list on the page."),
         entries.map(function (e, n) {
           if (e.group) return h("p", { className: "ix-group", key: n }, e.label);
@@ -891,7 +906,7 @@ details.part:not([open]) { gap: 0; }
 
     return h("aside", { className: "guide" + (trace ? " has-trace" : "") + (props.size === "side" ? "" : " is-wide is-" + props.size),
       "aria-label": auditor ? "Audit of this binder" : "Guide to this binder" },
-      h("div", { className: "guide-head" }, h("h2", null, auditor ? "Audit" : "Guide"),
+      h("div", { className: "guide-head" }, h("h2", null, auditor ? "Audit" : "Contents"),
         h("div", { className: "guide-acts" },
           h(Seg, { className: "guide-size", label: "How much of the screen the guide takes", value: props.size, options: sizes, onChange: props.setSize }),
           h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", "aria-label": "Close the guide", onClick: props.close }, h(R.Icon, { name: "close" })))),
@@ -902,8 +917,8 @@ details.part:not([open]) { gap: 0; }
         h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "walk-next", disabled: !props.walk.next,
           title: props.walk.next ? "Next: " + props.walk.next.label : undefined, onClick: props.walk.next ? props.walk.next.go : undefined },
           h("span", { className: "walk-label" }, props.walk.next ? "Next: " + props.walk.next.label : "End of the library"), h(R.Icon, { name: "arrow-right" }))),
-      h("div", { className: "tally" }, h(Seg, { label: "Show documents by verdict", value: filter, options: tally, onChange: setFilter })),
-      h("nav", { className: "guide-list", "aria-label": "Pages of this binder" }, lib.steps.map(function (step, i) {
+      auditor ? h("div", { className: "tally" }, h(Seg, { label: "Show documents by verdict", value: filter, options: tally, onChange: setFilter })) : null,
+      h("nav", { className: "guide-list", ref: list, "aria-label": "Pages of this binder" }, lib.steps.map(function (step, i) {
         var law = step.key === "legislation";
         var list = law ? [] : props.docsOf(step.key).filter(function (d) { return !narrowed || (props.verdicts[d.id] || "none") === filter; });
         if (narrowed && !list.length) return null;
@@ -919,11 +934,11 @@ details.part:not([open]) { gap: 0; }
               h("span", { className: "guide-name" }, h("span", null, d.title),
                 h("span", { className: "guide-meta" }, h("span", { className: "guide-what" }, auditor ? d.id : ""),
                   h("span", { className: "badges" }, open ? h(R.Badge, { tone: "primary", size: "sm" }, open + (open === 1 ? " comment" : " comments")) : null,
-                    verdictBadge(props.verdicts[d.id])))));
+                    auditor ? verdictBadge(props.verdicts[d.id]) : null))));
           }));
       })),
       // At full size the book is out of sight, so the half that follows the page being read is left out too.
-      full ? null : h("section", { className: "guide-page", "aria-label": trace ? "Selected statement" : zone === "comments" ? "Comments in this binder" : "On this page" },
+      full ? null : h("section", { className: "guide-page", "aria-label": trace ? "What you selected" : zone === "comments" ? "Comments in this binder" : "On this page" },
         h("div", { className: "guide-page-head" }, head),
         h("div", { className: "guide-page-body", ref: index }, body)),
       full ? h("section", { className: "guide-board", "aria-label": "Comments in this binder" },
@@ -1438,9 +1453,9 @@ details.part:not([open]) { gap: 0; }
       };
       var list = docsOf(step).map(function (doc) {
         return row(doc.id, doc.title, doc.id + (props.tools ? ", " + doc.words.toLocaleString() + " words" : ""), h("span", { className: "badges" },
-            h(R.Badge, { tone: "neutral", size: "sm" }, "Offered, not adopted"),
+            h(R.Badge, { tone: "neutral", size: "sm" }, "Not adopted yet"),
             doc.off ? h(R.Badge, { tone: "warning", size: "sm", title: doc.off }, "Outside the anatomy") : null,
-            props.verdicts[doc.id] ? verdictBadge(props.verdicts[doc.id]) : null),
+            props.mode === "auditor" && props.verdicts[doc.id] ? verdictBadge(props.verdicts[doc.id]) : null),
           h(R.Button, { variant: "neutral", emphasis: "link", size: "sm", className: "doc-open", "data-open": step + "|" + doc.id }, "View document"));
       }).concat(data.steps[step].unread.map(function (doc) {
         return row(doc.id, doc.title, doc.id, h(R.Badge, { tone: "warning", size: "sm" }, "Could not be read"), h("span", { className: "quiet" }, doc.problem));
@@ -1487,7 +1502,7 @@ details.part:not([open]) { gap: 0; }
             h(R.Icon, { name: "comment" }), openNotesOn(doc.id) + (openNotesOn(doc.id) === 1 ? " comment" : " comments")) : null,
           h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { commentOn(step, doc, label); } },
             h(R.Icon, { name: "comment" }), "Comment"),
-          step !== "legislation"
+          step !== "legislation" && props.mode === "auditor"
             ? h(R.ConformanceControl, { value: props.verdicts[doc.id] || "", onValueChange: function (value) { props.setVerdict(doc.id, value); } }) : null,
           open.length > 1 ? h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", className: "page-close",
             "aria-label": "Close the " + label + " page", title: "Close this page", onClick: function () { closePage(step); } }, h(R.Icon, { name: "close" })) : null) : null,
@@ -1533,15 +1548,18 @@ details.part:not([open]) { gap: 0; }
     // Every step keeps its spine, in order; an open step has its page straight after its spine.
     // One page, or pages side by side. The switch says which, and turning it on opens the next page beside this one.
     var split = open.length > 1, canSplit = room() > 1, beside = split || props.layout === "split";
-    var layout = h(Seg, { label: "Pages shown", value: split ? "split" : "one",
-      options: [["one", "One page", false, "Read one page at a time"],
-        ["split", "Two pages", !canSplit && !split, canSplit || split ? "The page you are reading, and one beside it" : "There is no room for two pages beside the Guide: close the Guide, or widen the window"]],
-      onChange: function (to) {
+    // One button that says what it will do (Jesse, 19 Oct: "one page 2 page dont make sense"): compare two
+    // documents side by side, or go back to one.
+    var layout = h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", className: "compare",
+      disabled: !canSplit && !split, "aria-pressed": split,
+      title: split || canSplit ? undefined : "There is no room to compare beside the Contents: close the Contents, or widen the window",
+      onClick: function () {
+        var to = split ? "one" : "split";
         if (size === "full") setSize("half");  // the book comes back into view to show what was asked for
         props.setLayout(to);  // the choice lasts: the next document and the next standard open the same way
         if (to === "one") only(current);
         else { setActive(current); setOpen(pairFor(current)); }
-      } });
+      } }, split ? "Show one page" : "Compare side by side");
 
     // Side by side, one more page can join the row, up to as many as the window holds: the next page of
     // the binder after those showing, or else the first one not showing.
@@ -1552,7 +1570,7 @@ details.part:not([open]) { gap: 0; }
     var addPage = beside && joining ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", disabled: noRoom,
       title: noRoom ? "There is no room for another page in this window" : "Open " + lib.steps[STEPS.indexOf(joining)].label + " beside the others",
       onClick: function () { if (size === "full") setSize("half"); show([joining], null); } },
-      h(R.Icon, { name: "add" }), "Add a page") : null;
+      h(R.Icon, { name: "add" }), "Add another page") : null;
 
     var kids = [];
     STEPS.forEach(function (step, i) {
@@ -1653,7 +1671,17 @@ details.part:not([open]) { gap: 0; }
     var controls = props.controls || [];
     var backHop = hops.length ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "back-hop", onClick: goBack },
       h(R.Icon, { name: "arrow-left" }), "Back to " + hops[hops.length - 1].label) : null;
-    return h("div", { className: "book" + (tucked ? " is-tucked" : ""), onClick: onClick, onMouseUp: onSweep, ref: book },
+    // The module and standard names open their menus as well as the small arrow beside them (Jesse, 19 Oct:
+    // "it's only popping down when pressing that small arrow"; the testers found the same). The menu opens on
+    // the arrow's own press, so the name hands its press on to the arrow.
+    function onNamePress(event) {
+      var name = event.target.closest('[data-slot="breadcrumb-item"] > a');
+      var arrow = name && name.parentElement.querySelector('button[aria-haspopup="menu"]');
+      if (!arrow || event.button !== 0) return;
+      event.preventDefault();
+      arrow.dispatchEvent(new PointerEvent("pointerdown", { bubbles: true, cancelable: true, button: 0, pointerType: event.pointerType || "mouse" }));
+    }
+    return h("div", { className: "book" + (tucked ? " is-tucked" : ""), onClick: onClick, onMouseUp: onSweep, onPointerDown: onNamePress, ref: book },
       h("div", { className: "stage-row stage-where" },
         h("div", { className: "stage-left" }, backHop, trail, controls[0] || null),
         controls[1] ? h("div", { className: "stage-search" }, controls[1]) : null),
@@ -1662,7 +1690,7 @@ details.part:not([open]) { gap: 0; }
         h("nav", { className: "pills step-tabs", "aria-label": "Pages of this standard" }, tucked ? backHop : null, pills),
         h("div", { className: "pills" }, layout, addPage,
           guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
-            h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
+            h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Contents"))),
       review,
       h("div", { className: "book-row" + (guide && size === "full" ? " is-full" : "") },
         h(R.DocumentSpread, { className: "relative" }, kids),
