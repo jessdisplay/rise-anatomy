@@ -326,6 +326,54 @@ details.part:not([open]) { gap: 0; }
  * fields and shadow-md on the comment box. Only the shadow layer is cleared: focus rings, which
  * use the same property, stay (Jesse, 19 Oct: "remove box shadows"). */
 *, ::before, ::after { --tw-shadow: 0 0 transparent !important; --tw-inset-shadow: 0 0 transparent !important; }
+
+/* ---- the page gets the screen (Jesse, 19 Oct: "should the top navs on form not be there or fold much more")
+ * Reading down a page tucks the bar's upper row away; scrolling up brings it back. Back stays beside the pages. */
+.book.is-tucked .stage-where, .book.is-tucked .review-bar { display: none; }
+.book.is-tucked .stage-what { padding-top: 0; border-top: 0; }
+/* Into the document, its title slims to one line. */
+.binder-page.is-scrolled > :first-child { padding-block: var(--spacing-s3); }
+.binder-page.is-scrolled > :first-child h2 { font-size: 1.125rem; line-height: 1.3; }
+.binder-page.is-scrolled > :first-child h2 + p, .binder-page.is-scrolled > :first-child .off-note { display: none; }
+
+/* ---- a form, one section at a time */
+/* What it is for and its privacy note: one quiet line above the questions, each open on a press. */
+.form-about { display: flex; flex-wrap: wrap; gap: var(--spacing-s2) var(--spacing-s6); padding-bottom: var(--spacing-s4); border-bottom: 1px solid var(--border); }
+.form-about .part { padding: 0; border: 0; }
+.form-about details.part:not([open]) { flex: 0 0 auto; }
+.form-about details.part[open] { flex: 1 1 100%; }
+.form-about .part > summary > h3 { flex: none; white-space: nowrap; font-size: max(0.9375rem, 15px); font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; }
+.form-about .part > summary > h3 .ix, .form-about .part > summary .count { display: none; }
+/* How far you are, and every section a press away. */
+.form-run { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-s3) var(--spacing-s5); padding: var(--spacing-s4) 0; scroll-margin-top: 7rem; }
+.form-progress { display: grid; grid-template-columns: auto minmax(8rem, 16rem) auto; align-items: center; gap: var(--spacing-s4); }
+.form-where { font-weight: 600; }
+.form-bar { height: 0.5rem; border-radius: var(--radius-full); background: var(--muted); overflow: hidden; }
+.form-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--tab-solid); transition: width var(--duration-slow) var(--ease-out); }
+.form-sections { position: relative; }
+.form-sections > summary { list-style: none; cursor: pointer; padding: var(--spacing-s2) var(--spacing-s4); border: 1px solid var(--border); border-radius: var(--radius-full); font-weight: 600; }
+.form-sections > summary::-webkit-details-marker { display: none; }
+.form-sections > summary:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.form-sections > ol { position: absolute; z-index: 10; right: 0; top: calc(100% + var(--spacing-s2)); width: min(28rem, 80vw); max-height: 60vh; overflow: auto; display: grid; gap: var(--spacing-s1); margin: 0; padding: var(--spacing-s3); list-style: none; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); }
+.form-sections button { display: flex; align-items: center; gap: var(--spacing-s3); width: 100%; padding: var(--spacing-s3); border: 0; border-radius: var(--radius-md); background: none; color: var(--foreground); font: inherit; text-align: left; cursor: pointer; }
+.form-sections button:hover, .form-sections button[aria-current] { background: var(--muted); }
+.form-sections button[aria-current] { font-weight: 600; }
+.form-mark { flex: none; display: inline-grid; place-items: center; width: 1.75rem; height: 1.75rem; border-radius: var(--radius-full); background: var(--muted); font-size: 0.8125em; font-weight: 700; }
+.form-mark.is-done { background: var(--tab-solid); color: var(--tab-solid-foreground); }
+.form-title { font-size: 1.375rem; line-height: 1.3; font-weight: 600; margin-bottom: var(--spacing-s2); }
+.is-form .q-text { font-size: 1.125em; font-weight: 600; }
+/* Back and Next stay in reach at the foot of the page. */
+.form-nav { position: sticky; bottom: 0; z-index: 2; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-s3); margin-top: var(--spacing-s6); padding: var(--spacing-s4) 0; border-top: 1px solid var(--border); background: var(--card); }
+.form-save { display: flex; flex-wrap: wrap; gap: var(--spacing-s3); }
+/* Check your answers: every answer, under its section, one press from where it is changed. */
+.check-sec { display: grid; gap: var(--spacing-s3); padding: var(--spacing-s5) 0; border-top: 1px solid var(--border); }
+.check-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--spacing-s3); }
+.check-head h4 { font-weight: 600; }
+.check-sec dl { display: grid; gap: var(--spacing-s3); margin: 0; }
+.check-sec dl > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--spacing-s4); }
+.check-sec dt { color: var(--muted-foreground); }
+.check-sec dd { margin: 0; overflow-wrap: anywhere; }
+@media (max-width: 47.99rem) { .form-progress { grid-template-columns: 1fr; } .check-sec dl > div { grid-template-columns: 1fr; gap: var(--spacing-s1); } }
 </style>
 </head>
 <body>
@@ -545,47 +593,100 @@ details.part:not([open]) { gap: 0; }
     return h("div", { className: "field" }, c.label ? h(R.Label, { htmlFor: id }, c.label) : null, input);
   }
 
+  // A form, one section at a time (Jesse, 19 Oct: "35 questions in a form?? not easy to use or navigate",
+  // "this is all supposed to take pain away"). What it is for and its privacy note fold into one quiet line;
+  // each section is one screen of a few questions with Back and Next; how far you are and the list of
+  // sections stay at the top; "Check your answers" comes before Save, each answer one press from where it is
+  // changed. Questions that do not apply to the kind of record chosen at question 1 never show.
+  var CHECK = "check";
   function FormPage(props) {
     var F = props.doc.form, kind = props.kind, answers = props.answers;
     var shown = F.questions.filter(function (q) { return !kind || q.skip.indexOf(kind) === -1; });
     var hidden = F.questions.length - shown.length;
+    var sections = F.sections.filter(function (sec) { return shown.some(function (q) { return q.section === sec; }); });
+    var at = props.section === CHECK ? CHECK : sections.indexOf(props.section) !== -1 ? props.section : sections[0];
+    var index = at === CHECK ? sections.length : sections.indexOf(at);
     var set = function (key, value) {
       var next = Object.assign({}, answers); next[key] = value; props.setAnswers(next);
       if (kind && key === "1.0") props.setKind(value);
     };
-    return h("div", { className: "doc" },
-      h(Part, { part: partNamed(F.parts, "What this is for") }, h("div", Object.assign({ className: "plain" }, html(F.intro)))),
-      h(Part, { part: partNamed(F.parts, "Privacy") }, h("div", Object.assign({ className: "plain" }, html(F.privacy)))),
-      h(Part, { part: partNamed(F.parts, "Sections and questions") },
-        hidden ? h("p", { className: "plain quiet" }, hidden + " questions that do not apply to a " + kind + " record are hidden. Question 1 changes the kind of record.") : null,
-        F.sections.map(function (section) {
-          var mine = shown.filter(function (q) { return q.section === section; });
-          if (!mine.length) return null;
-          return h(React.Fragment, { key: section }, h("h4", { className: "stage" }, section), mine.map(function (q) {
-            return h("div", { className: "item", id: q.id, key: q.no },
-              h("span", { className: "ix" }, q.short),
-              h("div", { className: "item-body", role: "group", "aria-labelledby": q.id + "-text" },
-                h("p", { className: "q-text", id: q.id + "-text" }, q.text),
-                q.hint ? h("p", Object.assign({ className: "hint" }, html(q.hint))) : null,
-                h("div", { className: "fields" }, q.controls.map(function (c, i) {
-                  var key = q.no + "." + i;
-                  return h(Control, { key: key, control: c, id: "a-" + props.doc.id + "-" + q.no + "-" + i, name: q.text,
-                    value: kind && key === "1.0" ? kind : answers[key], set: function (v) { set(key, v); } });
-                })),
-                q.trail ? h("div", html(q.trail)) : null));
-          }));
-        })),
-      h(Part, { part: partNamed(F.parts, "Sign-off") }, F.signs.length ? h("div", { className: "plain" }, F.signs.map(function (s, i) {
-        return h("div", { className: "sign", key: i },
-          h("p", html(s.confirms)),
-          h("div", { className: "field" }, h(R.Label, { htmlFor: "sign-" + props.doc.id + i }, s.who), h(R.Input, { id: "sign-" + props.doc.id + i, type: "text" })),
-          s.when ? h("div", { className: "field" }, h(R.Label, { htmlFor: "when-" + props.doc.id + i }, s.when),
-            h(R.Input, { id: "when-" + props.doc.id + i, type: s.when.toLowerCase().indexOf("time") === -1 ? "date" : "datetime-local" })) : null);
-      })) : h("div", Object.assign({ className: "plain" }, html(F.signoff)))),
-      h("div", { className: "actions" },
-        h(R.Button, { variant: "primary", onClick: props.save }, "Save record"),
-        props.review ? h(R.Button, { variant: "neutral", emphasis: "outline", onClick: function () { props.setAnswers(exampleAnswers(F, kind)); } }, "Fill with example answers") : null),
-      props.saved ? h("p", { className: "saved", role: "status" }, props.saved) : null,
+    var valueOf = function (q, i) { var key = q.no + "." + i; return kind && key === "1.0" ? kind : answers[key]; };
+    var answered = function (q) {
+      return q.controls.some(function (c, i) { var v = valueOf(q, i); return v != null && v !== "" && !(Array.isArray(v) && !v.length); });
+    };
+    var done = shown.filter(answered).length;
+    function goTo(next) { props.setSection(next); props.toTop(); }
+    var question = function (q) {
+      return h("div", { className: "item", id: q.id, key: q.no },
+        h("span", { className: "ix" }, q.short),
+        h("div", { className: "item-body", role: "group", "aria-labelledby": q.id + "-text" },
+          h("p", { className: "q-text", id: q.id + "-text" }, q.text),
+          q.hint ? h("p", Object.assign({ className: "hint" }, html(q.hint))) : null,
+          h("div", { className: "fields" }, q.controls.map(function (c, i) {
+            var key = q.no + "." + i;
+            return h(Control, { key: key, control: c, id: "a-" + props.doc.id + "-" + q.no + "-" + i, name: q.text,
+              value: valueOf(q, i), set: function (v) { set(key, v); } });
+          })),
+          q.trail ? h("div", html(q.trail)) : null));
+    };
+    var step = function (sec, i) {
+      var full = shown.filter(function (q) { return q.section === sec; }).every(answered);
+      return h("li", { key: sec }, h("button", { type: "button", "aria-current": sec === at ? "step" : undefined,
+        onClick: function (e) { e.currentTarget.closest("details").open = false; goTo(sec); } },
+        h("span", { className: "form-mark" + (full ? " is-done" : "") }, full ? h(R.Icon, { name: "check" }) : i + 1), sec));
+    };
+    var nextName = index + 1 < sections.length ? sections[index + 1] : "Check your answers";
+    var run = at === CHECK
+      ? h("div", { className: "form-check" },
+          h("h3", { className: "form-title" }, "Check your answers"),
+          h("p", { className: "quiet" }, "Read them through before you save. Change any answer where it was given."),
+          sections.map(function (sec) {
+            return h("section", { key: sec, className: "check-sec" },
+              h("div", { className: "check-head" }, h("h4", null, sec),
+                h(R.Button, { type: "button", variant: "neutral", emphasis: "link", size: "sm", onClick: function () { goTo(sec); } }, "Change")),
+              h("dl", null, shown.filter(function (q) { return q.section === sec; }).map(function (q) {
+                var said = q.controls.map(function (c, i) { var v = valueOf(q, i); return Array.isArray(v) ? v.join(", ") : v; }).filter(Boolean).join("; ");
+                return h("div", { key: q.no }, h("dt", null, q.short + ". " + q.text), h("dd", { className: said ? "" : "quiet" }, said || "Not answered"));
+              })));
+          }),
+          h(Part, { part: partNamed(F.parts, "Sign-off") }, F.signs.length ? h("div", { className: "plain" }, F.signs.map(function (sg, i) {
+            return h("div", { className: "sign", key: i },
+              h("p", html(sg.confirms)),
+              h("div", { className: "field" }, h(R.Label, { htmlFor: "sign-" + props.doc.id + i }, sg.who), h(R.Input, { id: "sign-" + props.doc.id + i, type: "text" })),
+              sg.when ? h("div", { className: "field" }, h(R.Label, { htmlFor: "when-" + props.doc.id + i }, sg.when),
+                h(R.Input, { id: "when-" + props.doc.id + i, type: sg.when.toLowerCase().indexOf("time") === -1 ? "date" : "datetime-local" })) : null);
+          })) : h("div", Object.assign({ className: "plain" }, html(F.signoff)))),
+          props.saved ? h("p", { className: "saved", role: "status" }, props.saved) : null)
+      : h("div", { className: "form-sec" },
+          h("h3", { className: "form-title" }, at),
+          hidden && index === 0 ? h("p", { className: "quiet" }, hidden + " questions that do not apply to a " + kind + " record are hidden. Question 1 changes the kind of record.") : null,
+          shown.filter(function (q) { return q.section === at; }).map(question));
+    return h("div", { className: "doc is-form" },
+      // What it is for and its privacy note: one quiet line above the questions, each open on a press.
+      h("div", { className: "form-about" },
+        h(Part, { part: partNamed(F.parts, "What this is for") }, h("div", Object.assign({ className: "plain" }, html(F.intro)))),
+        h(Part, { part: partNamed(F.parts, "Privacy") }, h("div", Object.assign({ className: "plain" }, html(F.privacy))))),
+      h("div", { className: "form-run" },
+        h("div", { className: "form-progress" },
+          h("p", { className: "form-where" }, at === CHECK ? "Last step: check your answers" : "Section " + (index + 1) + " of " + sections.length),
+          h("div", { className: "form-bar", role: "progressbar", "aria-label": "Questions answered", "aria-valuemin": 0, "aria-valuemax": shown.length, "aria-valuenow": done },
+            h("span", { style: { width: Math.round(done / Math.max(1, shown.length) * 100) + "%" } })),
+          h("p", { className: "quiet" }, done + " of " + shown.length + " answered")),
+        h("details", { className: "form-sections" }, h("summary", null, "All sections"),
+          h("ol", null, sections.map(step),
+            h("li", { key: CHECK }, h("button", { type: "button", "aria-current": at === CHECK ? "step" : undefined,
+              onClick: function (e) { e.currentTarget.closest("details").open = false; goTo(CHECK); } },
+              h("span", { className: "form-mark" }, h(R.Icon, { name: "check" })), "Check your answers"))))),
+      run,
+      h("div", { className: "form-nav" },
+        index > 0 ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", onClick: function () { goTo(sections[index - 1]); } },
+          h(R.Icon, { name: "arrow-left" }), "Back") : h("span"),
+        at === CHECK
+          ? h("div", { className: "form-save" },
+              props.review ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", onClick: function () { props.setAnswers(exampleAnswers(F, kind)); } }, "Fill with example answers") : null,
+              h(R.Button, { type: "button", variant: "primary", onClick: props.save }, "Save record"))
+          : h(R.Button, { type: "button", variant: "primary", onClick: function () { goTo(index + 1 < sections.length ? sections[index + 1] : CHECK); } },
+              "Next: " + nextName, h(R.Icon, { name: "arrow-right" }))),
       h(Part, { part: partNamed(F.parts, "After you submit") }, h("div", Object.assign({ className: "plain" }, html(F.after)))),
       F.extras.map(function (x) { return h(Part, { part: x.part, key: x.part.id }, h("div", Object.assign({ className: "plain" }, html(x.html)))); }),
       h(Part, { part: partNamed(F.parts, "Control") }, h("div", Object.assign({ className: "plain" }, html(F.control)))));
@@ -834,6 +935,8 @@ details.part:not([open]) { gap: 0; }
   // way back to the top once the reader has left it.
   function Pane(props) {
     var fit = React.useRef(null), entries = React.useRef(props.entries), tell = React.useRef(props.onHere), held = React.useRef(null);
+    var scrolled = React.useRef(props.onScrolled), last = React.useRef(0);
+    React.useEffect(function () { scrolled.current = props.onScrolled; });
     var m = React.useState(false), away = m[0], setAway = m[1];  // the reader has left the top of the document
     entries.current = props.entries;
     tell.current = props.onHere;
@@ -856,6 +959,11 @@ details.part:not([open]) { gap: 0; }
       function measure(moved) {
         waiting = false;
         setAway(box.scrollTop > 240);
+        // Once the reader is into the document its title slims to one line, and the book's bar tucks away
+        // while they read down (it comes back as they scroll up): the page gets the screen (Jesse, 19 Oct).
+        box.classList.toggle("is-scrolled", box.scrollTop > 60);
+        if (moved === true && scrolled.current) scrolled.current(box.scrollTop, box.scrollTop - last.current);
+        last.current = box.scrollTop;
         if (held.current) { tell.current(held.current, moved === true); return; }
         var line = box.getBoundingClientRect().top + box.firstElementChild.offsetHeight + 64, found = null;
         entries.current.forEach(function (e) {
@@ -920,6 +1028,20 @@ details.part:not([open]) { gap: 0; }
     // pages, the same documents, the same scroll on each page and the same selection (Jesse, 19 Oct: "how can
     // we go back once pressing a button and having it move").
     var bk = React.useState([]), hops = bk[0], setHops = bk[1];
+    var sa = React.useState({}), sectionAt = sa[0], setSectionAt = sa[1];  // the section each form is open at
+    var tk = React.useState(false), tucked = tk[0], setTucked = tk[1];    // the bar tucked away while the reader reads down
+    function onScrolled(top, delta) {
+      if (delta > 4 && top > 140) setTucked(true);
+      else if (delta < -4 || top < 60) setTucked(false);
+    }
+    // A question in a form is shown by opening its section first: a link, a search result or a comment
+    // that lands on question 37 must find it on screen.
+    function showQuestion(id) {
+      var addresses = places.at[id], place = addresses && data.where[addresses[0]];
+      if (!place || place.step !== "forms") return;
+      var doc = docOf("forms", place.doc), q = doc && doc.form && doc.form.questions.filter(function (x) { return x.id === id; })[0];
+      if (q) setSectionAt(function (now) { var next = Object.assign({}, now); next[doc.id] = q.section; return next; });
+    }
     var rs = React.useState(null), restoring = rs[0], setRestoring = rs[1];  // scroll positions to put back once drawn
     // Open comments on a document: on the document as a whole, and on any statement or line in it.
     function openNotesOn(docId) {
@@ -1051,6 +1173,7 @@ details.part:not([open]) { gap: 0; }
       var doc = docOf(place.step, place.doc);
       if (doc && doc.kind === "form") {
         var q = doc.form.questions.filter(function (x) { return x.address === address; })[0], kind = kindOf(doc);
+        if (q) setSectionAt(function (now) { var next = Object.assign({}, now); next[doc.id] = q.section; return next; });
         if (q && kind && q.skip.indexOf(kind) !== -1) {
           var fits = doc.form.kinds.filter(function (x) { return q.skip.indexOf(x) === -1; })[0];
           if (fits) keep(setKinds, kinds, doc.id, fits);
@@ -1149,6 +1272,7 @@ details.part:not([open]) { gap: 0; }
     function goNote(anchor) {
       if (size === "full") setSize("half");
       pick(anchor.step, anchor.doc);
+      showQuestion(anchor.holder);
       // Side by side stays side by side (the auditor tester: opening a comment dropped to one page).
       if (open.length > 1) show([anchor.step], null, true); else only(anchor.step);
       setPending(anchor);
@@ -1254,7 +1378,7 @@ details.part:not([open]) { gap: 0; }
           if (open.indexOf(to[0]) === -1 && link.closest(".guide")) only(to[0]); else show([to[0]], null);
           return;
         }
-        if (link.dataset.jump) { setLit({ id: link.dataset.jump, n: Date.now() }); return; }
+        if (link.dataset.jump) { showQuestion(link.dataset.jump); setLit({ id: link.dataset.jump, n: Date.now() }); return; }
         var page = link.closest("[data-page]") || (link.closest(".guide-page") ? { dataset: { page: trace ? trace.step : current } } : null);
         var from = page ? page.dataset.page : null;
         remember(trace ? trace.cite : from ? lib.steps[STEPS.indexOf(from)].label : "where you were");
@@ -1329,7 +1453,11 @@ details.part:not([open]) { gap: 0; }
       if (!doc) return stepTable(step);
       if (doc.kind === "form") return h(FormPage, { doc: doc, kind: kindOf(doc), setKind: function (v) { keep(setKinds, kinds, doc.id, v); },
         answers: answers[doc.id] || {}, setAnswers: function (v) { keep(setAnswers, answers, doc.id, v); }, save: function () { save(doc); }, saved: saved[doc.id],
-        review: props.tools });
+        review: props.tools, section: sectionAt[doc.id], setSection: function (v) { keep(setSectionAt, sectionAt, doc.id, v); },
+        toTop: function () {
+          var run = book.current && book.current.querySelector('[data-page="' + step + '"] .form-run');
+          if (run) run.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
+        } });
       if (doc.kind === "register") return h(RegisterPage, { doc: doc, rows: rows[doc.id] || [], sheet: sheets[doc.id] || 0,
         setSheet: function (v) { keep(setSheets, sheets, doc.id, v); }, column: columns[doc.id] || null,
         setColumn: function (v) {
@@ -1365,7 +1493,7 @@ details.part:not([open]) { gap: 0; }
             "aria-label": "Close the " + label + " page", title: "Close this page", onClick: function () { closePage(step); } }, h(R.Icon, { name: "close" })) : null) : null,
         basis: open.length > 1 ? 100 / open.length : null, className: "binder-page" + (open.length > 2 ? " is-tight" : ""),
         "data-page": step, "data-step": step },
-        h(Pane, { step: step, docId: doc ? doc.id : "", entries: entriesFor(doc), more: more, lit: lit,
+        h(Pane, { step: step, docId: doc ? doc.id : "", entries: entriesFor(doc), more: more, lit: lit, onScrolled: onScrolled,
           onHere: function (id, moved) {
             if (moved) setActive(step);
             setHere(function (now) { if (now[step] === id) return now; var next = Object.assign({}, now); next[step] = id; return next; });
@@ -1523,15 +1651,15 @@ details.part:not([open]) { gap: 0; }
     // search. Below: what you are reading (the five pages, numbered as their spines are) and how
     // (one page or two, add a page, the guide). Jesse, 19 Oct: "the top nav can make more sense".
     var controls = props.controls || [];
-    return h("div", { className: "book", onClick: onClick, onMouseUp: onSweep, ref: book },
+    var backHop = hops.length ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "back-hop", onClick: goBack },
+      h(R.Icon, { name: "arrow-left" }), "Back to " + hops[hops.length - 1].label) : null;
+    return h("div", { className: "book" + (tucked ? " is-tucked" : ""), onClick: onClick, onMouseUp: onSweep, ref: book },
       h("div", { className: "stage-row stage-where" },
-        h("div", { className: "stage-left" },
-          hops.length ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "back-hop", onClick: goBack },
-            h(R.Icon, { name: "arrow-left" }), "Back to " + hops[hops.length - 1].label) : null,
-          trail, controls[0] || null),
+        h("div", { className: "stage-left" }, backHop, trail, controls[0] || null),
         controls[1] ? h("div", { className: "stage-search" }, controls[1]) : null),
       h("div", { className: "stage-row stage-what" },
-        h("nav", { className: "pills step-tabs", "aria-label": "Pages of this standard" }, pills),
+        // While the bar is tucked, Back still shows here, beside the pages.
+        h("nav", { className: "pills step-tabs", "aria-label": "Pages of this standard" }, tucked ? backHop : null, pills),
         h("div", { className: "pills" }, layout, addPage,
           guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
             h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
