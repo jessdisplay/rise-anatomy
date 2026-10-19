@@ -379,6 +379,33 @@ details.part:not([open]) { gap: 0; }
 /* The module and standard names open their menus too. */
 [data-slot="breadcrumb-item"] > a { cursor: pointer; }
 [data-slot="breadcrumb-item"] > a:hover { text-decoration: underline; text-underline-offset: 0.2em; }
+
+/* ---- answers that take the pain away: oversize boxes, choice cards, dates in one press */
+.is-form .fields { display: grid; gap: var(--spacing-s5); max-width: 40rem; }
+.is-form .fields.is-set-aside { opacity: 0.45; }
+.is-form .field input, .is-form .field textarea { min-height: 3.5rem; font-size: 1.125rem; padding-inline: var(--spacing-s5); }
+.is-form .field textarea.grows { min-height: 6rem; resize: vertical; overflow: hidden; }
+.is-form .field > label, .is-form .field > p > strong { font-size: 1rem; }
+/* Each option a card to press anywhere on; several can be ticked where the question allows. */
+.choice-cards { display: grid; gap: var(--spacing-s3); }
+.choice-cards.is-yes-no { grid-template-columns: repeat(2, minmax(0, 12rem)); }
+.choice-card { display: flex; align-items: center; gap: var(--spacing-s4); min-height: 3.5rem; padding: var(--spacing-s4) var(--spacing-s5); border: 2px solid var(--border); border-radius: var(--radius-lg); background: var(--card); font-size: 1.0625rem; cursor: pointer; transition: background var(--duration-fast) var(--ease-out), border-color var(--duration-fast) var(--ease-out); }
+.choice-card:hover { border-color: var(--tab); background: var(--tab-subtle); }
+.choice-card.is-on { border-color: var(--tab-solid); background: var(--tab-soft); font-weight: 600; }
+.choice-card:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
+/* Dates: Today and Yesterday a press away, any other day picked beside them. */
+.date-quick { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s3); }
+.date-quick .date-pick { width: auto; min-width: 12rem; }
+/* Other ways to answer, under the question. */
+.answer-also { display: flex; flex-wrap: wrap; gap: var(--spacing-s3); }
+.attach { display: flex; align-items: center; gap: var(--spacing-s3); max-width: 40rem; min-height: 3.5rem; padding: var(--spacing-s4) var(--spacing-s5); border: 2px dashed var(--muted-foreground); border-radius: var(--radius-lg); font-weight: 600; cursor: pointer; }
+.attach:hover { background: var(--muted); }
+.attach:focus-within { outline: 2px solid var(--ring); outline-offset: 2px; }
+.attach.is-set { border-style: solid; border-color: var(--tab-solid); background: var(--tab-soft); }
+.saved-row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s4); }
+@media (max-width: 47.99rem) { .choice-cards.is-yes-no { grid-template-columns: 1fr 1fr; } }
+.is-form .field { justify-items: stretch; }
+.is-form .field > input, .is-form .field > textarea { max-width: 40rem; }
 </style>
 </head>
 <body>
@@ -570,32 +597,68 @@ details.part:not([open]) { gap: 0; }
 
   function partNamed(parts, name) { return parts.filter(function (p) { return p.name === name; })[0]; }
 
+  // Answers that take the pain away (Jesse, 19 Oct: "oversize boxes and other ways to get that info in",
+  // then "yes to all"): choices as big cards to press anywhere on, Yes or No as two big buttons with neither
+  // chosen, dates in one press, people picked from a list, long answers in boxes that grow as you write.
+  // The example's lists are samples; the platform draws them from the provider's own records.
+  var PEOPLE = {
+    participant: ["Alex Taylor (example)", "Sam Nguyen (example)", "Priya Shah (example)"],
+    staff: ["Jordan Lee, Behaviour Support Practitioner (example)", "Casey Brown, Support Worker (example)", "Morgan Ellis, Clinical Supervisor (example)"]
+  };
+  function two(n) { return String(n).padStart(2, "0"); }
+  function dayOf(d) { return d.getFullYear() + "-" + two(d.getMonth() + 1) + "-" + two(d.getDate()); }
+  function peopleFor(question, label) {
+    var said = (question + " " + label).toLowerCase();
+    if (!/\bname\b|^who\b|\bwho\b/.test(said)) return null;
+    if (/practitioner|worker|staff|supervisor|manager|nurse|clinician|recorded by|who (made|wrote|checked|did)/.test(said)) return "staff";
+    if (/participant/.test(said)) return "participant";
+    return null;
+  }
+
   function Control(props) {
     var c = props.control, id = props.id, value = props.value, set = props.set, name = props.name;
-    if (c.type === "one") {
+    if (c.type === "one" || c.type === "any") {
+      var many = c.type === "any", chosen = many ? (value || []) : value;
+      var yesNo = !many && c.options.length === 2 && c.options[0] === "yes" && c.options[1] === "no";
+      var cards = c.options.map(function (option, i) {
+        var on = many ? chosen.indexOf(option) !== -1 : chosen === option;
+        var mark = many
+          ? h(R.Checkbox, { id: id + "-" + i, checked: on, onCheckedChange: function (yes) {
+              set(yes ? chosen.concat(option) : chosen.filter(function (x) { return x !== option; }));
+            } })
+          : h(R.RadioGroupItem, { value: option, id: id + "-" + i });
+        return h("label", { key: option, htmlFor: id + "-" + i, className: "choice-card" + (on ? " is-on" : "") }, mark, h("span", null, cap(option)));
+      });
       return h("div", { className: "field" }, c.label ? h("p", null, h("strong", null, c.label)) : null,
-        h(R.RadioGroup, { value: value || "", onValueChange: set, "aria-label": c.label || name, className: "choices" },
-          c.options.map(function (option, i) {
-            return h("div", { className: "choice", key: option },
-              h(R.RadioGroupItem, { value: option, id: id + "-" + i }), h(R.Label, { htmlFor: id + "-" + i }, cap(option)));
-          })));
+        many ? h("div", { className: "choice-cards", role: "group", "aria-label": c.label || name }, cards)
+          : h(R.RadioGroup, { value: value || "", onValueChange: set, "aria-label": c.label || name, className: "choice-cards" + (yesNo ? " is-yes-no" : "") }, cards));
     }
-    if (c.type === "any") {
-      var chosen = value || [];
-      return h("div", { className: "field" }, c.label ? h("p", null, h("strong", null, c.label)) : null,
-        h("div", { className: "choices", role: "group", "aria-label": c.label || name },
-          c.options.map(function (option, i) {
-            return h("div", { className: "choice", key: option },
-              h(R.Checkbox, { id: id + "-" + i, checked: chosen.indexOf(option) !== -1, onCheckedChange: function (on) {
-                set(on ? chosen.concat(option) : chosen.filter(function (x) { return x !== option; }));
-              } }),
-              h(R.Label, { htmlFor: id + "-" + i }, cap(option)));
-          })));
+    if (c.type === "date" || c.type === "datetime") {
+      var now = new Date(), yesterday = new Date(now.getTime() - 864e5);
+      var quick = c.type === "date" ? [["Today", dayOf(now)], ["Yesterday", dayOf(yesterday)]]
+        : [["Now", dayOf(now) + "T" + two(now.getHours()) + ":" + two(now.getMinutes())]];
+      return h("div", { className: "field" }, c.label ? h(R.Label, { htmlFor: id }, c.label) : null,
+        h("div", { className: "date-quick" },
+          quick.map(function (q) {
+            return h(R.Button, { key: q[0], type: "button", variant: "neutral", emphasis: value === q[1] ? "solid" : "outline", size: "md",
+              "aria-pressed": value === q[1], onClick: function () { set(q[1]); } }, q[0]);
+          }),
+          h(R.Input, { id: id, type: c.type === "date" ? "date" : "datetime-local", value: value || "", className: "date-pick",
+            "aria-label": c.label ? undefined : name + ", pick a date", onChange: function (e) { set(e.target.value); } })));
     }
     var common = { id: id, value: value || "", onChange: function (e) { set(e.target.value); }, "aria-label": c.label ? undefined : name };
-    var input = c.type === "long" ? h(R.Textarea, Object.assign({ rows: 4 }, common))
-      : h(R.Input, Object.assign({ type: c.type === "date" ? "date" : c.type === "datetime" ? "datetime-local" : c.type === "number" ? "number" : "text" }, common));
-    return h("div", { className: "field" }, c.label ? h(R.Label, { htmlFor: id }, c.label) : null, input);
+    if (c.type === "long") {
+      return h("div", { className: "field" }, c.label ? h(R.Label, { htmlFor: id }, c.label) : null,
+        h(R.Textarea, Object.assign({ rows: 3, className: "grows",
+          // The box grows with what is written, so the writer never scrolls inside a small box.
+          onInput: function (e) { e.target.style.height = "auto"; e.target.style.height = e.target.scrollHeight + "px"; } }, common)));
+    }
+    var who = c.type === "text" ? peopleFor(name, c.label || "") : null;
+    return h("div", { className: "field" }, c.label ? h(R.Label, { htmlFor: id }, c.label) : null,
+      h(R.Input, Object.assign({ type: c.type === "number" ? "text" : "text", inputMode: c.type === "number" ? "numeric" : undefined,
+        list: who ? id + "-people" : undefined }, common)),
+      who ? h("datalist", { id: id + "-people" }, PEOPLE[who].map(function (person) { return h("option", { key: person, value: person }); })) : null,
+      who ? h("p", { className: "hint" }, "Start typing, or pick from your " + (who === "staff" ? "staff" : "participants") + ".") : null);
   }
 
   // A form, one section at a time (Jesse, 19 Oct: "35 questions in a form?? not easy to use or navigate",
@@ -617,7 +680,14 @@ details.part:not([open]) { gap: 0; }
     };
     var valueOf = function (q, i) { var key = q.no + "." + i; return kind && key === "1.0" ? kind : answers[key]; };
     var answered = function (q) {
-      return q.controls.some(function (c, i) { var v = valueOf(q, i); return v != null && v !== "" && !(Array.isArray(v) && !v.length); });
+      return !!answers[q.no + ".other"] || !!answers[q.no + ".file"] ||
+        q.controls.some(function (c, i) { var v = valueOf(q, i); return v != null && v !== "" && !(Array.isArray(v) && !v.length); });
+    };
+    // The answers from the last record of this form saved here, offered where an answer rarely changes.
+    var sameAsLast = function (q) {
+      var next = Object.assign({}, answers);
+      q.controls.forEach(function (c, i) { var key = q.no + "." + i; if (props.last[key] != null) next[key] = props.last[key]; });
+      props.setAnswers(next);
     };
     var done = shown.filter(answered).length;
     function goTo(next) { props.setSection(next); props.toTop(); }
@@ -627,11 +697,29 @@ details.part:not([open]) { gap: 0; }
         h("div", { className: "item-body", role: "group", "aria-labelledby": q.id + "-text" },
           h("p", { className: "q-text", id: q.id + "-text" }, q.text),
           q.hint ? h("p", Object.assign({ className: "hint" }, html(q.hint))) : null,
-          h("div", { className: "fields" }, q.controls.map(function (c, i) {
+          h("div", { className: "fields" + (answers[q.no + ".other"] ? " is-set-aside" : "") }, q.controls.map(function (c, i) {
             var key = q.no + "." + i;
             return h(Control, { key: key, control: c, id: "a-" + props.doc.id + "-" + q.no + "-" + i, name: q.text,
               value: valueOf(q, i), set: function (v) { set(key, v); } });
           })),
+          // Other ways to answer: the last record's answer, an answer the template allows instead of an empty box.
+          (props.last && index === 0) || q.allows.length ? h("div", { className: "answer-also" },
+            props.last && index === 0 && q.controls.some(function (c, i) { return props.last[q.no + "." + i] != null; })
+              ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { sameAsLast(q); } },
+                  h(R.Icon, { name: "copy" }), "Same as last time") : null,
+            q.allows.map(function (word) {
+              var on = answers[q.no + ".other"] === word;
+              return h(R.Button, { key: word, type: "button", variant: "neutral", emphasis: on ? "solid" : "outline", size: "sm", "aria-pressed": on,
+                onClick: function () { set(q.no + ".other", on ? "" : word); } }, word);
+            })) : null,
+          // Something signed, a consent or a copy: attached as a photo or file, not described.
+          q.attach ? h("label", { className: "attach" + (answers[q.no + ".file"] ? " is-set" : "") },
+            h(R.Icon, { name: answers[q.no + ".file"] ? "check" : "upload" }),
+            h("span", null, answers[q.no + ".file"] ? "Attached: " + answers[q.no + ".file"] : "Attach a photo or file"),
+            h("input", { type: "file", className: "sr-only", onChange: function (e) {
+              var file = e.target.files && e.target.files[0]; e.target.value = "";
+              if (file) set(q.no + ".file", file.name);
+            } })) : null,
           q.trail ? h("div", html(q.trail)) : null));
     };
     var step = function (sec, i) {
@@ -650,7 +738,8 @@ details.part:not([open]) { gap: 0; }
               h("div", { className: "check-head" }, h("h4", null, sec),
                 h(R.Button, { type: "button", variant: "neutral", emphasis: "link", size: "sm", onClick: function () { goTo(sec); } }, "Change")),
               h("dl", null, shown.filter(function (q) { return q.section === sec; }).map(function (q) {
-                var said = q.controls.map(function (c, i) { var v = valueOf(q, i); return Array.isArray(v) ? v.join(", ") : v; }).filter(Boolean).join("; ");
+                var said = [answers[q.no + ".other"]].concat(q.controls.map(function (c, i) { var v = valueOf(q, i); return Array.isArray(v) ? v.join(", ") : v; }),
+                  answers[q.no + ".file"] ? ["Attached " + answers[q.no + ".file"]] : []).filter(Boolean).join("; ");
                 return h("div", { key: q.no }, h("dt", null, q.short + ". " + q.text), h("dd", { className: said ? "" : "quiet" }, said || "Not answered"));
               })));
           }),
@@ -661,7 +750,8 @@ details.part:not([open]) { gap: 0; }
               sg.when ? h("div", { className: "field" }, h(R.Label, { htmlFor: "when-" + props.doc.id + i }, sg.when),
                 h(R.Input, { id: "when-" + props.doc.id + i, type: sg.when.toLowerCase().indexOf("time") === -1 ? "date" : "datetime-local" })) : null);
           })) : h("div", Object.assign({ className: "plain" }, html(F.signoff)))),
-          props.saved ? h("p", { className: "saved", role: "status" }, props.saved) : null)
+          props.saved ? h("div", { className: "saved-row" }, h("p", { className: "saved", role: "status" }, props.saved),
+            h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", onClick: props.restart }, "Start a new record")) : null)
       : h("div", { className: "form-sec" },
           h("h3", { className: "form-title" }, at),
           hidden && index === 0 ? h("p", { className: "quiet" }, hidden + " questions that do not apply to a " + kind + " record are hidden. Question 1 changes the kind of record.") : null,
@@ -1044,10 +1134,18 @@ details.part:not([open]) { gap: 0; }
     // we go back once pressing a button and having it move").
     var bk = React.useState([]), hops = bk[0], setHops = bk[1];
     var sa = React.useState({}), sectionAt = sa[0], setSectionAt = sa[1];  // the section each form is open at
+    var ls = React.useState({}), lastSaved = ls[0], setLastSaved = ls[1];   // each form's answers as last saved here
     var tk = React.useState(false), tucked = tk[0], setTucked = tk[1];    // the bar tucked away while the reader reads down
+    // Tucking the bar changes the page's height, which moves its scroll; read alone, that move would bring
+    // the bar back and start a loop. So the bar moves only after a clear run of scrolling one way (48px),
+    // and not again until the page has settled (400ms).
+    var tuckRun = React.useRef({ at: 0, run: 0 });
     function onScrolled(top, delta) {
-      if (delta > 4 && top > 140) setTucked(true);
-      else if (delta < -4 || top < 60) setTucked(false);
+      var t = tuckRun.current, now = Date.now();
+      if (now - t.at < 400) return;
+      t.run = (t.run > 0) === (delta > 0) ? t.run + delta : delta;
+      if (!tucked && t.run > 48 && top > 160) { t.at = now; t.run = 0; setTucked(true); }
+      else if (tucked && (t.run < -48 || top < 40)) { t.at = now; t.run = 0; setTucked(false); }
     }
     // A question in a form is shown by opening its section first: a link, a search result or a comment
     // that lands on question 37 must find it on screen.
@@ -1413,6 +1511,7 @@ details.part:not([open]) { gap: 0; }
     }
 
     function save(doc) {
+      keep(setLastSaved, lastSaved, doc.id, Object.assign({}, answers[doc.id] || {}));
       var kind = kindOf(doc), family = kind ? kind.split(" ")[0] : "";
       var targets = registers.filter(function (reg) { return feeds(doc, reg); });
       if (!targets.length) { keep(setSaved, saved, doc.id, "Saved. No register in this binder takes this form's answers."); return; }
@@ -1469,6 +1568,10 @@ details.part:not([open]) { gap: 0; }
       if (doc.kind === "form") return h(FormPage, { doc: doc, kind: kindOf(doc), setKind: function (v) { keep(setKinds, kinds, doc.id, v); },
         answers: answers[doc.id] || {}, setAnswers: function (v) { keep(setAnswers, answers, doc.id, v); }, save: function () { save(doc); }, saved: saved[doc.id],
         review: props.tools, section: sectionAt[doc.id], setSection: function (v) { keep(setSectionAt, sectionAt, doc.id, v); },
+        last: lastSaved[doc.id] || null,
+        restart: function () {
+          keep(setAnswers, answers, doc.id, {}); keep(setSaved, saved, doc.id, null); keep(setSectionAt, sectionAt, doc.id, null);
+        },
         toTop: function () {
           var run = book.current && book.current.querySelector('[data-page="' + step + '"] .form-run');
           if (run) run.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
