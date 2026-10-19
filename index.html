@@ -66,6 +66,17 @@
 .subs > li { display: grid; grid-template-columns: 2.25rem minmax(0, 1fr); }
 .stage-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-s4) var(--spacing-s5); }
 .stage-left { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s3) var(--spacing-s5); }
+/* The bar in two rows: where you are and search above; the five pages and how you read them below. */
+.stage-what { padding-top: var(--spacing-s3); border-top: 1px solid var(--border); }
+.stage-search { flex: 1 1 22rem; display: flex; justify-content: flex-end; min-width: 0; }
+.stage-search .search { width: min(100%, 40rem); }
+.stage-search .search input { flex: 1; width: auto; max-width: none; }
+.step-no { display: inline-grid; place-items: center; min-width: 1.375rem; height: 1.375rem; margin-right: var(--spacing-s2); border-radius: var(--radius-full); background: var(--card); color: var(--foreground); font-size: 0.8125em; font-weight: 700; }
+/* The auditor's review of the standard, under the bar: progress, what is open, the next document to check. */
+.review-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-s3) var(--spacing-s5); padding: var(--spacing-s3) var(--spacing-s5); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--card); }
+.review-said { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--spacing-s2) var(--spacing-s5); }
+.review-said span { color: var(--muted-foreground); }
+.review-acts { display: flex; flex-wrap: wrap; gap: var(--spacing-s3); }
 .pills { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s3); }
 .work { display: flex; flex: 1; flex-direction: column; gap: var(--spacing-s5); min-height: 0; width: 100%; padding: var(--spacing-s6) var(--spacing-s7) var(--spacing-s7); }
 .binder-page { min-width: 0; }
@@ -144,12 +155,18 @@ details.part:not([open]) { gap: 0; }
 .trail .go { display: inline-flex; align-items: center; gap: var(--spacing-s2); padding: var(--spacing-s1) var(--spacing-s3); border: 1px solid var(--primary-solid); border-radius: var(--radius-full); background: var(--card); color: var(--primary-foreground); font-weight: 600; line-height: 1.4; text-decoration: none; }
 .trail .go:hover { background: var(--primary-surface); }
 .trail .go:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-.lk-more { font-style: normal; }
+.lk-more { padding: var(--spacing-s1) var(--spacing-s2); border: 0; border-radius: var(--radius-sm); background: none; color: var(--foreground); font: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 0.2em; cursor: pointer; }
+.lk-more:hover { background: var(--muted); }
+.lk-more:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.lk-more .when-open, .rel.is-open .lk-more .for-provider, .rel.is-open .lk-more .for-auditor { display: none; }
+.rel.is-open .lk-more .when-open { display: inline; }
 
 /* ---- two views of the same pages. A provider opens one page, with parts named in words and the
  * first three links of each kind. An auditor gets codes and every link. */
-.is-provider .as-code, .is-auditor .as-name, .is-auditor .lk-more { display: none; }
-.is-provider .lk:nth-of-type(n+4) { display: none; }
+.is-provider .as-code, .is-auditor .as-name { display: none; }
+.is-provider .lk-more .for-auditor, .is-auditor .lk-more .for-provider { display: none; }
+.is-auditor .lk-more:not(:has(.for-auditor)) { display: none; }
+.is-provider .rel:not(.is-open) .lk:nth-of-type(n+4), .is-auditor .rel:not(.is-open) .lk:nth-of-type(n+7) { display: none; }
 /* The extras for judging the design itself stay out of both views until Design tools is ticked. */
 .frame:not(.has-tools) details.part > summary .count { font-size: 0; }
 .frame:not(.has-tools) details.part > summary .count::after { font-size: max(0.875rem, 14px); }
@@ -654,7 +671,11 @@ details.part:not([open]) { gap: 0; }
     var tally = [["all", "All " + judged.length], ["conforms", "Conform " + count.conforms], ["non-conforming", "Do not " + count["non-conforming"]], ["none", "Not checked " + count.none]];
     var zo = React.useState("index"), zone = zo[0], setZone = zo[1];  // what the lower half holds while nothing is selected
     // A page's "Comments" button asks for the comments to be shown (Jesse, 19 Oct: "in the side by side where is the comments").
-    React.useEffect(function () { if (props.ask) setZone(props.ask.zone); }, [props.ask && props.ask.n]);
+    React.useEffect(function () {
+      if (!props.ask) return;
+      if (props.ask.zone) setZone(props.ask.zone);
+      if (props.ask.filter) setFilter(props.ask.filter);
+    }, [props.ask && props.ask.n]);
     var narrowed = filter !== "all";
     var reading = lib.steps.filter(function (step) { return step.key === props.current; })[0];
     var doc = props.docsOf(props.current).filter(function (d) { return d.id === props.picked[props.current]; })[0];
@@ -1128,7 +1149,8 @@ details.part:not([open]) { gap: 0; }
     function goNote(anchor) {
       if (size === "full") setSize("half");
       pick(anchor.step, anchor.doc);
-      only(anchor.step);
+      // Side by side stays side by side (the auditor tester: opening a comment dropped to one page).
+      if (open.length > 1) show([anchor.step], null, true); else only(anchor.step);
       setPending(anchor);
     }
     React.useEffect(function () {
@@ -1212,6 +1234,14 @@ details.part:not([open]) { gap: 0; }
     }, [lit]);
 
     function onClick(event) {
+      // "and N more" opens the rest of a row of links where it is, and closes it again.
+      var more = event.target.closest(".lk-more");
+      if (more) {
+        var row = more.closest(".rel");
+        row.classList.toggle("is-open");
+        more.setAttribute("aria-expanded", String(row.classList.contains("is-open")));
+        return;
+      }
       var link = event.target.closest("[data-go], [data-jump], [data-open], [data-binder]");
       if (link) {
         event.preventDefault();
@@ -1377,7 +1407,7 @@ details.part:not([open]) { gap: 0; }
     var split = open.length > 1, canSplit = room() > 1, beside = split || props.layout === "split";
     var layout = h(Seg, { label: "Pages shown", value: split ? "split" : "one",
       options: [["one", "One page", false, "Read one page at a time"],
-        ["split", "Side by side", !canSplit && !split, canSplit || split ? "Two pages: the one you are reading, and one beside it" : "This window is too narrow for two pages"]],
+        ["split", "Two pages", !canSplit && !split, canSplit || split ? "The page you are reading, and one beside it" : "There is no room for two pages beside the Guide: close the Guide, or widen the window"]],
       onChange: function (to) {
         if (size === "full") setSize("half");  // the book comes back into view to show what was asked for
         props.setLayout(to);  // the choice lasts: the next document and the next standard open the same way
@@ -1414,7 +1444,7 @@ details.part:not([open]) { gap: 0; }
           if (size === "full") { setSize("half"); only(x.key); return; }
           if (!isOpen) { if (beside) show([x.key], null); else only(x.key); }
           else if (open.length > 1) setOpen(open.filter(function (y) { return y !== x.key; }));
-        } }, h("span", { className: "pill-dot" }), x.label);
+        } }, h("span", { className: "pill-dot" }), h("span", { className: "step-no", "aria-hidden": true }, STEPS.indexOf(x.key) + 1), x.label);
     });
 
     // The trail is the platform's: module, then standard, each with its siblings on a chevron.
@@ -1468,13 +1498,44 @@ details.part:not([open]) { gap: 0; }
       };
     }, [offer]);
 
+    // The auditor's review of this standard: how far it has got, what is open, and the next document
+    // to check (the walk the guide held as "Next: ...", made the main way forward).
+    var reviewable = [];
+    STEPS.forEach(function (step) { if (step !== "legislation") docsOf(step).forEach(function (d) { reviewable.push({ step: step, doc: d }); }); });
+    var checked = reviewable.filter(function (x) { return props.verdicts[x.doc.id]; }).length;
+    var openComments = reviewable.reduce(function (sum, x) { return sum + openNotesOn(x.doc.id); }, 0);
+    var toCheck = reviewable.filter(function (x) { return !props.verdicts[x.doc.id]; })[0];
+    var review = props.mode === "auditor" ? h("section", { className: "review-bar", "aria-label": "Your review of this standard" },
+      h("p", { className: "review-said" }, h("strong", null, "Reviewing " + data.crumbs[1].index + " " + data.crumbs[1].label),
+        h("span", null, checked + " of " + reviewable.length + " documents checked"),
+        openComments ? h("span", null, openComments + (openComments === 1 ? " open comment" : " open comments")) : null),
+      h("div", { className: "review-acts" },
+        checked < reviewable.length ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm",
+          onClick: function () { setGuide(true); setTrace(null); setAsk({ filter: "none", n: Date.now() }); } }, "Show only not checked") : null,
+        toCheck ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm",
+          onClick: function () { remember(current ? lib.steps[STEPS.indexOf(current)].label : "where you were"); pick(toCheck.step, toCheck.doc.id);
+            if (beside) show([toCheck.step], null, true); else only(toCheck.step); } },
+          "Next to check: " + toCheck.doc.title, h(R.Icon, { name: "arrow-right" }))
+        : walk.next ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", onClick: walk.next.go },
+          "All checked. Next: " + walk.next.label, h(R.Icon, { name: "arrow-right" })) : null)) : null;
+
+    // The bar in two rows. Above: where you are (Back, the module and standard, what is shown) and
+    // search. Below: what you are reading (the five pages, numbered as their spines are) and how
+    // (one page or two, add a page, the guide). Jesse, 19 Oct: "the top nav can make more sense".
+    var controls = props.controls || [];
     return h("div", { className: "book", onClick: onClick, onMouseUp: onSweep, ref: book },
-      h("div", { className: "stage-row" }, h("div", { className: "stage-left" }, trail,
-        hops.length ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "back-hop", onClick: goBack },
-          h(R.Icon, { name: "arrow-left" }), "Back to " + hops[hops.length - 1].label) : null),
-        h("div", { className: "pills" }, props.controls, layout, pills, addPage,
-        guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
-          h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
+      h("div", { className: "stage-row stage-where" },
+        h("div", { className: "stage-left" },
+          hops.length ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "back-hop", onClick: goBack },
+            h(R.Icon, { name: "arrow-left" }), "Back to " + hops[hops.length - 1].label) : null,
+          trail, controls[0] || null),
+        controls[1] ? h("div", { className: "stage-search" }, controls[1]) : null),
+      h("div", { className: "stage-row stage-what" },
+        h("nav", { className: "pills step-tabs", "aria-label": "Pages of this standard" }, pills),
+        h("div", { className: "pills" }, layout, addPage,
+          guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
+            h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
+      review,
       h("div", { className: "book-row" + (guide && size === "full" ? " is-full" : "") },
         h(R.DocumentSpread, { className: "relative" }, kids),
         guide ? h(Guide, { mode: props.mode, lib: lib, docsOf: docsOf, entriesFor: entriesFor, open: open, picked: picked, here: here, current: current,
@@ -1641,8 +1702,8 @@ details.part:not([open]) { gap: 0; }
     }
     return h("form", { className: "search", role: "search", onSubmit: function (e) { e.preventDefault(); if (shown[active]) choose(shown[active]); },
       onBlur: function (e) { if (!e.currentTarget.contains(e.relatedTarget)) setFocused(false); } },
-      h(R.Label, { htmlFor: "search" }, "Search"),
-      h(R.Input, { id: "search", ref: box, type: "text", value: typed, autoComplete: "off", placeholder: "Search every document. Press /",
+      h(R.Label, { htmlFor: "search" }, h(R.Icon, { name: "search" }), "Search every document"),
+      h(R.Input, { id: "search", ref: box, type: "search", value: typed, autoComplete: "off", "aria-keyshortcuts": "/", title: "Press / to search from anywhere",
         onFocus: function () { setFocused(true); load(); }, onChange: function (e) { change(e.target.value); }, onKeyDown: keys }),
       body);
   }
@@ -1732,7 +1793,7 @@ details.part:not([open]) { gap: 0; }
 
     if (failed) return h("p", { className: "loading" }, "The library could not be read: " + failed + ". Reload the page to try again.");
     if (!lib) return h("p", { className: "loading" }, "Loading the library.");
-    var shown = h(Seg, { key: "shown", label: "What is shown", value: view, options: [["binder", "Binder"], ["table", "All documents"]], onChange: setView });
+    var shown = h(Seg, { key: "shown", label: "What is shown", value: view, options: [["binder", "This standard"], ["table", "All documents"]], onChange: setView });
     var search = h(Search, { key: "search", here: key, steps: lib.steps, open: function (row) {
       var doc = row.a.split(" ").slice(0, row.a.charAt(0) === "s" ? 2 : 1).join(" ");
       var stay = data && (data.where[row.a] || data.where[doc]);
