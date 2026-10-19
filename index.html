@@ -406,6 +406,69 @@ details.part:not([open]) { gap: 0; }
 @media (max-width: 47.99rem) { .choice-cards.is-yes-no { grid-template-columns: 1fr 1fr; } }
 .is-form .field { justify-items: stretch; }
 .is-form .field > input, .is-form .field > textarea { max-width: 40rem; }
+/* Changes. A part that changed carries a mark at the end of its words; pressed, the change opens right there. */
+.chg { justify-self: start; display: grid; gap: var(--spacing-s3); width: 100%; cursor: auto; }
+.chg-in { display: grid; gap: var(--spacing-s3); }
+.chg-mark { justify-self: start; }
+.chg-box { display: grid; gap: var(--spacing-s4); padding: var(--spacing-s4) var(--spacing-s5); border-left: 3px solid var(--tab-solid); background: var(--card); }
+.doc .item:has(.chg-box):hover { background: none; }
+/* New words: Rise's warm tab colour, underlined, so they never read as a comment (yellow) or a selection. */
+::highlight(rise-changed) { background-color: var(--tab-soft); text-decoration: underline 2px var(--tab-solid); text-underline-offset: 0.2em; }
+.rise-changed { background: var(--tab-soft); }
+/* One change, read the same way in the page, the guide, the record and the list of every change. */
+.change { display: grid; align-content: start; gap: var(--spacing-s3); padding-block: var(--spacing-s5); border-top: 1px solid var(--border); font-size: max(0.9375rem, 15px); line-height: 1.5; }
+.chg-box > .change:first-child, .changes-day > h3 + .change { border-top: 0; padding-top: 0; }
+.change-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--spacing-s2) var(--spacing-s4); }
+.change > .doc-link { justify-self: start; }
+.change-where { color: var(--muted-foreground); }
+.change-words { display: grid; gap: var(--spacing-s2); }
+.change-words > div { display: grid; grid-template-columns: 7.5rem minmax(0, 1fr); gap: var(--spacing-s3); align-items: baseline; }
+.change-words dt { font-size: max(0.875em, 14px); color: var(--muted-foreground); }
+.change-words dd { max-width: none; }
+.change-words del { color: var(--muted-foreground); text-decoration-thickness: 1px; }
+.change-words ins { background: var(--tab-soft); text-decoration: underline 2px var(--tab-solid); text-underline-offset: 0.2em; padding-inline: 0.15em; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.change-why, .change-who { max-width: 60rem; }
+.change-who { font-size: max(0.875em, 14px); color: var(--muted-foreground); }
+.change-acts { display: flex; flex-wrap: wrap; gap: var(--spacing-s3); }
+.change.is-waiting { padding-inline: var(--spacing-s4); border-left: 3px solid var(--warning-solid); background: var(--warning-subtle); }
+.guide-page-body > .change { padding-inline: var(--spacing-s3); }
+.guide-page-body > .change.is-waiting { padding-inline: var(--spacing-s4); }
+/* In a register: the changed row is marked, and opened as a record its changed field says what it was. */
+.row-mark { display: inline-flex; align-items: center; gap: var(--spacing-s1); margin-right: var(--spacing-s2); padding: 0 var(--spacing-s2); border: 1px solid var(--tab-solid); border-radius: var(--radius-sm); background: var(--tab-subtle); color: var(--tab-solid); font-size: 13px; font-weight: 600; white-space: nowrap; }
+.row-mark svg { width: 0.875rem; height: 0.875rem; }
+.record-fields > div.is-changed { border-left: 3px solid var(--tab-solid); padding-left: var(--spacing-s3); }
+.field-was { display: block; margin-top: var(--spacing-s1); font-size: max(0.875em, 14px); color: var(--muted-foreground); }
+.record-changes { display: grid; gap: 0; }
+.record-changes h4 { font-weight: 600; }
+/* Every change, in one place: the choices across the top, the changes under them by day, using the width. */
+.all-changes { flex: 1; min-height: 0; overflow: auto; display: grid; align-content: start; gap: var(--spacing-s5); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--spacing-s6); }
+.changes-head { display: grid; gap: var(--spacing-s2); }
+.changes-head h2 { font-size: 1.5rem; font-weight: 600; }
+.changes-note { max-width: 60rem; padding: var(--spacing-s3) var(--spacing-s4); border-left: 3px solid var(--tab-solid); background: var(--tab-subtle); font-size: max(0.9375rem, 15px); }
+.filters { display: flex; flex-wrap: wrap; align-items: end; gap: var(--spacing-s4) var(--spacing-s6); }
+.filter { display: grid; gap: var(--spacing-s2); width: min(100%, 18rem); }
+.filter:has(.seg) { width: auto; }
+.filter-label { font-size: 0.875rem; font-weight: 500; }
+.changes-count { font-weight: 600; }
+/* One row per change, read across like a log; the same four columns head the list. */
+.changes-cols, .change.is-row { display: grid; grid-template-columns: minmax(10rem, 0.7fr) minmax(16rem, 1.3fr) minmax(16rem, 1.5fr) minmax(14rem, 1.2fr); gap: var(--spacing-s3) var(--spacing-s6); }
+.changes-cols { padding-bottom: var(--spacing-s2); border-bottom: 1px solid var(--border); font-size: 0.875rem; font-weight: 500; color: var(--muted-foreground); }
+.changes-day { display: grid; }
+.changes-day > h3 { padding: var(--spacing-s5) 0 var(--spacing-s2); font-size: 1rem; font-weight: 600; }
+.change.is-row { padding-block: var(--spacing-s4); }
+.change.is-row.is-waiting { padding-inline: var(--spacing-s4); }
+.change-col { display: grid; align-content: start; gap: var(--spacing-s2); min-width: 0; }
+.change-col.is-who { font-size: max(0.875em, 14px); color: var(--muted-foreground); }
+.change-time { font-weight: 600; color: var(--foreground); }
+.change.is-row .change-words > div { grid-template-columns: 6.5rem minmax(0, 1fr); }
+@media (max-width: 63.99rem) { .changes-cols { display: none; } .change.is-row { grid-template-columns: 1fr; } }
+@media (max-width: 47.99rem) { .all-changes { padding: var(--spacing-s4); } .change-words > div, .change.is-row .change-words > div { grid-template-columns: 1fr; gap: 0; } }
+/* A narrow page, whatever made it narrow (a phone, pages side by side, a wide Contents), puts its buttons under its title, so none runs off the edge. */
+.binder-page { container-type: inline-size; }
+@container (max-width: 36rem) {
+  .binder-page > :first-child { flex-direction: column; align-items: stretch; gap: var(--spacing-s3); }
+  .binder-page .page-acts { justify-content: flex-start; }
+}
 </style>
 </head>
 <body>
@@ -797,6 +860,9 @@ details.part:not([open]) { gap: 0; }
     // A register is too wide to read across. One row opens as a record: its fields listed down the page.
     var ro = React.useState(null), opened = ro[0], setOpened = ro[1];
     var record = rows.filter(function (x) { return x.i === opened; })[0];
+    // A row that changed is marked, and opened as a record it says what changed, when and by whom.
+    var changesOf = function (i) { return newestFirst(props.changes.filter(function (c) { return c.holder === "row-" + props.doc.id + "-" + i; })); };
+    React.useEffect(function () { if (props.showRow) setOpened(props.showRow.i); }, [props.showRow && props.showRow.n]);
     var block = function (name, text) { return h(Part, { part: partNamed(G.parts, name) }, h("div", Object.assign({ className: "plain" }, html(text)))); };
     return h("div", { className: "doc is-wide" },
       block("What this proves", G.proves),
@@ -815,9 +881,12 @@ details.part:not([open]) { gap: 0; }
           h("tbody", null,
             rows.map(function (x) {
               var toggle = function () { setOpened(opened === x.i ? null : x.i); };
-              return h("tr", { key: x.i, id: "row-" + props.doc.id + "-" + x.i, className: "is-row" + (x.row.example ? " example" : "") + (opened === x.i ? " is-open" : ""),
+              var changed = changesOf(x.i).length > 0;
+              return h("tr", { key: x.i, id: "row-" + props.doc.id + "-" + x.i, className: "is-row" + (x.row.example ? " example" : "") + (opened === x.i ? " is-open" : "") + (changed ? " is-changed" : ""),
                 tabIndex: 0, "aria-expanded": opened === x.i, onClick: toggle, onKeyDown: function (event) { if (event.key === "Enter") toggle(); } },
-                columns.map(function (c) { return h("td", { key: c.letter }, x.row.cells[c.letter] || ""); }));
+                columns.map(function (c, n) {
+                  return h("td", { key: c.letter }, n === 0 && changed ? h("span", { className: "row-mark" }, h(R.Icon, { name: "pencil" }), "Changed") : null, x.row.cells[c.letter] || "");
+                }));
             }),
             [0, 1].map(function (i) { return h("tr", { key: "blank" + i }, columns.map(function (c) { return h("td", { key: c.letter }, ""); })); })))),
         h("p", { className: "quiet" }, rows.length + (rows.length === 1 ? " row" : " rows") + " on this sheet. Saving a form that feeds this register adds one. Select a row to read it as a record, or a column heading to see what it holds."),
@@ -826,9 +895,14 @@ details.part:not([open]) { gap: 0; }
             h("h4", null, "Record " + (rows.indexOf(record) + 1) + " of " + rows.length + (record.row.example ? " (example)" : "")),
             h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setOpened(null); } }, "Back to the table")),
           h("dl", { className: "record-fields" }, columns.map(function (c) {
-            return h("div", { key: c.letter }, h("dt", null, "Col " + c.letter + ", " + c.name),
-              h("dd", null, record.row.cells[c.letter] || h("span", { className: "quiet" }, "Not filled")));
-          }))) : null,
+            var last = changesOf(record.i).filter(function (x) { return x.column === c.letter; })[0];
+            return h("div", { key: c.letter, className: last ? "is-changed" : undefined }, h("dt", null, "Col " + c.letter + ", " + c.name),
+              h("dd", null, record.row.cells[c.letter] || h("span", { className: "quiet" }, "Not filled"),
+                last ? h("span", { className: "field-was" }, "Changed " + onDay(last.when) + ". Was: ", h("del", null, last.was)) : null));
+          })),
+          changesOf(record.i).length ? h("section", { className: "record-changes", "aria-label": "Changes to this record" },
+            h("h4", null, "Changes to this record"),
+            changesOf(record.i).map(function (c) { return h(ChangeCard, { key: c.id, change: c, mode: props.mode, place: true }); })) : null) : null,
         picked ? h("div", { className: "col-card" },
           h("h4", null, "Col " + picked.letter + ": " + picked.name),
           h("p", html(picked.meaning)),
@@ -855,6 +929,99 @@ details.part:not([open]) { gap: 0; }
   function verdictBadge(verdict) {
     var known = VERDICT[verdict];
     return h(R.Badge, { tone: known ? known[1] : "neutral", size: "sm", dot: !!known }, known ? known[0] : "Not checked");
+  }
+
+  // ---- changes. One log, never saved drafts (the 13 Oct decision), shown in four places: a mark on the
+  // paragraph or register row that changed, the Changes half of the guide, the page of every change, and
+  // the auditor's count of what changed since their last audit (Jesse, 19 Oct: "we should also show the
+  // edits and changes log"). Each change says where, the words before and after, who, when and why.
+  // Dates and times read as the platform writes them, in Rise's time zone: "16 Oct 2026, 2:25 pm".
+  var AT_TIME = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric", hour: "numeric", minute: "2-digit", timeZone: "Australia/Brisbane" });
+  var ON_DAY = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "Australia/Brisbane" });
+  var CALENDAR_DAY = new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  function atTime(instant) { return AT_TIME.format(new Date(instant)); }
+  function onDay(instant) { return ON_DAY.format(new Date(instant)); }
+  function calendarDay(day) { return CALENDAR_DAY.format(new Date(day + "T00:00:00Z")); }
+  var CHANGE_SAID = { wording: "Wording changed", answer: "Answer changed", rise: "Rise suggests new wording",
+    taken: "Rise's new wording used", kept: "Own wording kept", record: "Record saved", verdict: "Verdict given" };
+  function newestFirst(list) { return list.slice().sort(function (a, b) { return new Date(b.when) - new Date(a.when); }); }
+  function changeCount(n) { return n + (n === 1 ? " change" : " changes"); }
+  // A Rise suggestion still waiting for the provider's answer.
+  function waiting(change) { return change.kind === "rise" && !change.state; }
+
+  // One change, read the same way wherever it is shown. A Rise suggestion asks the provider to choose;
+  // the auditor sees the question, not the buttons. In the list of every change it is one row across the
+  // width (`row`), read like a log: when and who, what changed, the words, why.
+  function ChangeCard(props) {
+    var c = props.change, rise = c.kind === "rise", auditor = props.mode === "auditor";
+    var words = rise ? [["On the page", c.was, "span"], ["Rise suggests", c.now, "ins"]] : [["Was", c.was, "del"], ["Now", c.now, "ins"]];
+    var head = h("div", { className: "change-head", key: "head" },
+      h("strong", null, CHANGE_SAID[c.kind]),
+      h("span", { className: "badges" },
+        waiting(c) ? h(R.Badge, { tone: "warning", size: "sm" }, auditor ? "Waiting for the provider" : "Needs your answer") : null,
+        c.example ? h(R.Badge, { tone: "neutral", size: "sm" }, "Example") : null));
+    var place = props.onGo ? h("button", { type: "button", className: "doc-link", key: "place", onClick: props.onGo }, c.title + ", " + c.cite)
+      : props.place ? h("p", { className: "change-where", key: "place" }, c.cite) : null;
+    var said = c.was || c.now ? h("dl", { className: "change-words", key: "words" }, words.map(function (w) {
+      return w[1] ? h("div", { key: w[0] }, h("dt", null, w[0]), h("dd", null, h(w[2], null, w[1]))) : null;
+    })) : null;
+    var note = c.note ? h("p", { className: "change-why", key: "note" }, c.note) : null;
+    var why = c.why ? h("p", { className: "change-why", key: "why" }, h("strong", null, "Why: "), c.why) : null;
+    var who = h("p", { className: "change-who", key: "who" }, c.who + (c.role ? ", " + c.role : "") + " · ", timeOf(c.when));
+    var answered = c.state ? h("p", { className: "change-why", key: "answered" }, c.state === "taken" ? "Answered: the new wording is in use." : "Answered: the provider kept their own wording.") : null;
+    var acts = waiting(c) && !auditor && props.onChoose ? h("div", { className: "change-acts", key: "acts" },
+      h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", onClick: function () { props.onChoose(c, "taken"); } }, "Use the new wording"),
+      h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { props.onChoose(c, "kept"); } }, "Keep our wording")) : null;
+    var className = "change" + (waiting(c) ? " is-waiting" : "") + (props.row ? " is-row" : "");
+    if (props.row) return h("article", { className: className },
+      h("div", { className: "change-col is-who" }, h("p", { className: "change-time" }, h("time", { dateTime: c.when }, AT_TIME.format(new Date(c.when)).split(", ")[1])),
+        h("p", null, c.who + (c.role ? ", " + c.role : ""))),
+      h("div", { className: "change-col" }, head, place, note, answered, acts),
+      h("div", { className: "change-col" }, said),
+      h("div", { className: "change-col" }, why));
+    return h("article", { className: className }, head, place, said, note, why, who, answered, acts);
+  }
+  function timeOf(instant) { return h("time", { dateTime: instant }, atTime(instant)); }
+
+  // The mark on a part that changed, at the end of its words. Pressed, it opens what changed right there.
+  function ChangeMark(props) {
+    var list = props.list, asks = list.some(waiting), latest = list[0];
+    return h("div", { className: "chg-in" },
+      h(R.Button, { type: "button", variant: asks ? "warning" : "neutral", emphasis: asks ? "soft" : "outline", size: "sm", className: "chg-mark", "aria-expanded": props.open,
+        onClick: props.onToggle },
+        h(R.Icon, { name: asks ? "info" : "pencil" }),
+        asks ? "Rise suggests new wording" : "Changed " + onDay(latest.when) + (latest.example ? " (example)" : ""),
+        h(R.Icon, { name: props.open ? "chevron-up" : "chevron-down" })),
+      props.open ? h("div", { className: "chg-box" }, list.map(function (c) {
+        return h(ChangeCard, { key: c.id, change: c, mode: props.mode, onChoose: props.onChoose });
+      })) : null);
+  }
+
+  // A document's own markup, with a mark on each part that changed. The markup is the template's, drawn
+  // as it is, so the marks join it once it is on the page: each at the end of its part's words, where it
+  // moves nothing a comment on those words is anchored to.
+  function DocHtml(props) {
+    var box = React.useRef(null), sl = React.useState([]), slots = sl[0], setSlots = sl[1];
+    var on = {};
+    props.changes.forEach(function (c) { (on[c.holder] = on[c.holder] || []).push(c); });
+    var holders = Object.keys(on).join(" ");
+    React.useLayoutEffect(function () {
+      var found = [];
+      Object.keys(on).forEach(function (id) {
+        var part = box.current && document.getElementById(id), body = part && box.current.contains(part) && (part.querySelector(":scope > .item-body") || part);
+        if (!body) return;
+        var slot = body.querySelector(":scope > .chg");
+        if (!slot) { slot = document.createElement("div"); slot.className = "chg"; body.appendChild(slot); }
+        found.push({ id: id, node: slot });
+      });
+      setSlots(found);
+    }, [props.html, holders]);
+    return h(React.Fragment, null,
+      h("div", Object.assign({ className: "doc", ref: box }, html(props.html))),
+      slots.map(function (s) {
+        return on[s.id] ? ReactDOM.createPortal(h(ChangeMark, { list: newestFirst(on[s.id]), open: !!props.opened[s.id], mode: props.mode,
+          onToggle: function () { props.toggle(s.id); }, onChoose: props.onChoose }), s.node, s.id) : null;
+      }));
   }
 
   function Guide(props) {
@@ -922,6 +1089,16 @@ details.part:not([open]) { gap: 0; }
     };
     var sizes = [["side", "Narrow"], ["half", "Wide"], ["full", "Full"]], full = props.size === "full";
     var live = board.filter(function (x) { return !x.t.resolved; }).length;
+    // Every change to this binder's documents, newest first, each one press from the place it changed.
+    var changed = newestFirst(props.changes.filter(function (c) { return mine[c.doc]; }));
+    var history = [
+      changed.some(function (c) { return c.example; }) ? h("p", { className: "guide-what", key: "example" },
+        "Changes marked Example show how Rise keeps a record of every change. Nothing in this example is saved.") : null,
+      changed.length ? null : h("p", { className: "guide-what", key: "none" }, "Nothing in this standard's documents has changed yet."),
+      changed.map(function (c) {
+        return h(ChangeCard, { key: c.id, change: c, mode: props.mode, onGo: function () { props.goChange(c); }, onChoose: props.choose });
+      })];
+    var asking = changed.filter(waiting).length;
     var said = board.length ? live + " open of " + board.length : "No comments yet";
     var notes = [
       board.length ? null : h("p", { className: "guide-what", key: "none" }, "Use the Comment button beside a page title, or select a statement or one line of it in a document."),
@@ -933,7 +1110,8 @@ details.part:not([open]) { gap: 0; }
       })];
     // The lower half has a heading that stays put and a body that scrolls, so nothing is ever cut mid sentence.
     // It holds the selected statement, or every comment in the binder, or the index of the page being read.
-    var choose = h(Seg, { label: "What this half of the guide shows", value: zone, options: [["index", "On this page"], ["comments", "Comments" + (live ? " " + live : "")]], onChange: setZone });
+    var choose = h(Seg, { label: "What this half of the guide shows", value: zone,
+      options: [["index", "On this page"], ["comments", "Comments" + (live ? " " + live : "")], ["changes", "Changes" + (changed.length ? " " + changed.length : "")]], onChange: setZone });
     var head, body;
     if (trace) {
       head = [h("div", { className: "trace-head", key: "over" }, h("p", { className: "guide-over" }, trace.about === "document" ? "This document" : trace.span ? "Highlighted words" : "What you selected"),
@@ -982,6 +1160,10 @@ details.part:not([open]) { gap: 0; }
     } else if (zone === "comments") {
       head = [h(React.Fragment, { key: "choose" }, choose), h("p", { className: "guide-title", key: "title" }, said)];
       body = notes;
+    } else if (zone === "changes") {
+      head = [h(React.Fragment, { key: "choose" }, choose), h("p", { className: "guide-title", key: "title" },
+        changed.length ? changeCount(changed.length) + (asking ? ", " + asking + " waiting for an answer" : "") : "No changes yet")];
+      body = history;
     } else {
       head = [h(React.Fragment, { key: "choose" }, choose), h("p", { className: "guide-title", key: "title" }, doc ? doc.title : reading.label)];
       body = [doc ? h("p", { className: "guide-what trace-hint", key: "hint" }, "Tap a numbered paragraph to comment on it or see what it links to. You can also highlight words to comment on them.")
@@ -1028,10 +1210,12 @@ details.part:not([open]) { gap: 0; }
           }));
       })),
       // At full size the book is out of sight, so the half that follows the page being read is left out too.
-      full ? null : h("section", { className: "guide-page", "aria-label": trace ? "What you selected" : zone === "comments" ? "Comments in this binder" : "On this page" },
+      full ? null : h("section", { className: "guide-page", "aria-label": trace ? "What you selected" : zone === "comments" ? "Comments in this binder" : zone === "changes" ? "Changes in this binder" : "On this page" },
         h("div", { className: "guide-page-head" }, head),
         h("div", { className: "guide-page-body", ref: index }, body)),
-      full ? h("section", { className: "guide-board", "aria-label": "Comments in this binder" },
+      full ? zone === "changes" ? h("section", { className: "guide-board", "aria-label": "Changes in this binder" },
+        h("p", { className: "guide-over" }, "Changes in this binder"), h("p", { className: "guide-title" }, changed.length ? changeCount(changed.length) : "No changes yet"), history)
+      : h("section", { className: "guide-board", "aria-label": "Comments in this binder" },
         h("p", { className: "guide-over" }, "Comments in this binder"), h("p", { className: "guide-title" }, said), notes) : null);
   }
 
@@ -1136,6 +1320,14 @@ details.part:not([open]) { gap: 0; }
     var sa = React.useState({}), sectionAt = sa[0], setSectionAt = sa[1];  // the section each form is open at
     var ls = React.useState({}), lastSaved = ls[0], setLastSaved = ls[1];   // each form's answers as last saved here
     var tk = React.useState(false), tucked = tk[0], setTucked = tk[1];    // the bar tucked away while the reader reads down
+    var mk = React.useState({}), marks = mk[0], setMarks = mk[1];        // the change marks opened, by the part they sit on
+    var sr = React.useState(null), showRow = sr[0], setShowRow = sr[1];  // a register row asked to open as a record
+    function toggleMark(id) { setMarks(function (now) { var next = Object.assign({}, now); next[id] = !now[id]; return next; }); }
+    // The changes to one document. A Rise suggestion taken puts its words on the page, in place of the old.
+    function changesOn(docId) { return props.changes.filter(function (c) { return c.doc === docId; }); }
+    function htmlFor(doc) {
+      return changesOn(doc.id).reduce(function (text, c) { return c.kind === "taken" && c.swap ? text.split(c.swap[0]).join(c.swap[1]) : text; }, doc.html);
+    }
     // Tucking the bar changes the page's height, which moves its scroll; read alone, that move would bring
     // the bar back and start a loop. So the bar moves only after a clear run of scrolling one way (48px),
     // and not again until the page has settled (400ms).
@@ -1390,6 +1582,15 @@ details.part:not([open]) { gap: 0; }
       if (open.length > 1) show([anchor.step], null, true); else only(anchor.step);
       setPending(anchor);
     }
+    // Go to a change: its document beside the guide, the part in view, its mark open, or its record open.
+    function goChange(c) {
+      if (size === "full") setSize("half");
+      pick(c.step, c.doc);
+      if (open.length > 1) show([c.step], null, true); else only(c.step);
+      if (c.step === "registers") setShowRow({ i: Number(c.holder.split("-").pop()), n: Date.now() });
+      else setMarks(function (now) { var next = Object.assign({}, now); next[c.holder] = true; return next; });
+      setLit({ id: c.holder, n: Date.now() });
+    }
     React.useEffect(function () {
       var holder = pending && document.getElementById(pending.holder);
       if (!holder) return;  // its page is still being drawn
@@ -1429,8 +1630,17 @@ details.part:not([open]) { gap: 0; }
         var line = held && (trace.span ? { box: held, from: trace.span[0], to: trace.span[1] } : linesOf(held)[trace.line - 1]);
         if (line) chosen.push(line);
       }
+      // The words a change put on the page, painted while its mark is open.
+      var fresh = [];
+      props.changes.forEach(function (c) {
+        var node = marks[c.holder] && c.now && c.kind !== "rise" ? document.getElementById(c.holder) : null;
+        if (!node || !book.current.contains(node)) return;
+        var from = node.textContent.indexOf(c.now);
+        if (from !== -1) fresh.push({ box: node, from: from, to: from + c.now.length });
+      });
       paint("rise-noted", noted, book.current);
       paint("rise-picked", chosen, book.current);
+      paint("rise-changed", fresh, book.current);
       book.current.querySelectorAll("[data-notes]").forEach(function (node) { if (!open[node.id]) node.removeAttribute("data-notes"); });
       Object.keys(open).forEach(function (id) {
         var node = document.getElementById(id);
@@ -1455,6 +1665,7 @@ details.part:not([open]) { gap: 0; }
     // Arriving from another binder, a search result or the table: go to what was asked for.
     React.useEffect(function () {
       if (!props.arrive) return;
+      if (props.arrive.change) { only(props.arrive.change.step); goChange(props.arrive.change); return; }
       // What was asked for is shown on its own, not beside the page the binder happens to open on.
       if (props.arrive.part) { var step = props.arrive.step; if (step) { pick(step, props.arrive.doc); land(step); } setLit({ id: props.arrive.part, n: Date.now() }); }
       else if (data.where[props.arrive.address]) { go(props.arrive.address, null); land(data.where[props.arrive.address].step); }
@@ -1501,7 +1712,7 @@ details.part:not([open]) { gap: 0; }
       // Selecting a statement, or a line of one, traces it. Controls, and text being selected to copy, are left alone.
       var onPage = event.target.closest("[data-page]");
       if (onPage && !String(window.getSelection()) &&
-          !event.target.closest("button, input, textarea, select, label, summary, [role=radio], [role=checkbox]")) {
+          !event.target.closest("button, input, textarea, select, label, summary, [role=radio], [role=checkbox], .chg")) {
         for (var holder = event.target.closest("[id]"); holder && onPage.contains(holder); holder = holder.parentElement && holder.parentElement.closest("[id]")) {
           if (places.at[holder.id] || holder.classList.contains("part")) { startTrace(holder.id, onPage.dataset.page, event); break; }
         }
@@ -1519,6 +1730,9 @@ details.part:not([open]) { gap: 0; }
       targets.forEach(function (t) { next[t.id] = (rows[t.id] || []).concat(rowFrom(doc, t.register, Object.assign({}, answers[doc.id] || {}, kind ? { "1.0": kind } : {}), kind, false)); });
       setRows(next);
       keep(setSaved, saved, doc.id, "Saved. The row is in " + reg.id + ", open beside this page.");
+      var row = next[reg.id].length - 1;
+      props.changeActs.log({ kind: "record", binder: data.key, step: "registers", doc: reg.id, title: reg.title, holder: "row-" + reg.id + "-" + row,
+        cite: "Register, record " + (row + 1), note: "From " + doc.id + ", " + doc.title + "." });
       if (family) reg.register.sheets.some(function (x, i) { if (x.name.toLowerCase().indexOf(family) === 0) { keep(setSheets, sheets, reg.id, i); return true; } return false; });
       pick("registers", reg.id);
       show(["registers"], "forms", true);
@@ -1577,13 +1791,16 @@ details.part:not([open]) { gap: 0; }
           if (run) run.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
         } });
       if (doc.kind === "register") return h(RegisterPage, { doc: doc, rows: rows[doc.id] || [], sheet: sheets[doc.id] || 0,
+        changes: changesOn(doc.id).filter(function (c) { return c.kind === "answer"; }), mode: props.mode,
+        showRow: showRow && picked.registers === doc.id ? showRow : null,
         setSheet: function (v) { keep(setSheets, sheets, doc.id, v); }, column: columns[doc.id] || null,
         setColumn: function (v) {
           keep(setColumns, columns, doc.id, v);
           var col = doc.register.columns.filter(function (c) { return c.letter === v; })[0];
           if (col) startTrace(col.id, "registers");  // a column heading is a statement too
         } });
-      return h("div", Object.assign({ className: "doc" }, html(doc.html)));
+      return h(DocHtml, { html: htmlFor(doc), changes: changesOn(doc.id).filter(function (c) { return c.kind !== "record" && c.kind !== "verdict"; }),
+        opened: marks, toggle: toggleMark, mode: props.mode, onChoose: props.changeActs.choose });
     }
 
     function page(step) {
@@ -1605,6 +1822,9 @@ details.part:not([open]) { gap: 0; }
             h(R.Icon, { name: "comment" }), openNotesOn(doc.id) + (openNotesOn(doc.id) === 1 ? " comment" : " comments")) : null,
           h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { commentOn(step, doc, label); } },
             h(R.Icon, { name: "comment" }), "Comment"),
+          changesOn(doc.id).length ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm",
+            onClick: function () { if (size === "full") setSize("half"); setGuide(true); setTrace(null); setAsk({ zone: "changes", n: Date.now() }); } },
+            h(R.Icon, { name: "pencil" }), changeCount(changesOn(doc.id).length)) : null,
           step !== "legislation" && props.mode === "auditor"
             ? h(R.ConformanceControl, { value: props.verdicts[doc.id] || "", onValueChange: function (value) { props.setVerdict(doc.id, value); } }) : null,
           open.length > 1 ? h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", className: "page-close",
@@ -1711,7 +1931,7 @@ details.part:not([open]) { gap: 0; }
       if (!chosen || chosen.isCollapsed || !chosen.rangeCount || String(chosen).trim().length < 2) return;
       var range = chosen.getRangeAt(0), from = range.startContainer.nodeType === 1 ? range.startContainer : range.startContainer.parentElement;
       var onPage = from && from.closest("[data-page]");
-      if (!onPage || !from.closest(".doc") || from.closest("input, textarea, [role=group], .record, .reg-wrap, .trail")) return;
+      if (!onPage || !from.closest(".doc") || from.closest("input, textarea, [role=group], .record, .reg-wrap, .trail, .chg")) return;
       var holder = from.closest(".item, .part");
       while (holder && !(places.at[holder.id] || holder.classList.contains("part"))) holder = holder.parentElement && holder.parentElement.closest(".item, .part");
       if (!holder) return;
@@ -1754,11 +1974,17 @@ details.part:not([open]) { gap: 0; }
     var checked = reviewable.filter(function (x) { return props.verdicts[x.doc.id]; }).length;
     var openComments = reviewable.reduce(function (sum, x) { return sum + openNotesOn(x.doc.id); }, 0);
     var toCheck = reviewable.filter(function (x) { return !props.verdicts[x.doc.id]; })[0];
+    // What changed in this standard's documents since the auditor last audited it (the verdicts given now are their own).
+    var since = props.changes.filter(function (c) {
+      return c.binder === data.key && c.kind !== "verdict" && new Date(c.when) > new Date(props.lastAudit + "T00:00:00+10:00");
+    }).length;
     var review = props.mode === "auditor" ? h("section", { className: "review-bar", "aria-label": "Your review of this standard" },
       h("p", { className: "review-said" }, h("strong", null, "Reviewing " + data.crumbs[1].index + " " + data.crumbs[1].label),
         h("span", null, checked + " of " + reviewable.length + " documents checked"),
         openComments ? h("span", null, openComments + (openComments === 1 ? " open comment" : " open comments")) : null),
       h("div", { className: "review-acts" },
+        h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { props.showChanges({ since: true, binder: data.key }); } },
+          h(R.Icon, { name: "pencil" }), since ? changeCount(since) + " since the last audit" : "No changes since the last audit"),
         checked < reviewable.length ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm",
           onClick: function () { setGuide(true); setTrace(null); setAsk({ filter: "none", n: Date.now() }); } }, "Show only not checked") : null,
         toCheck ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm",
@@ -1799,7 +2025,7 @@ details.part:not([open]) { gap: 0; }
         h(R.DocumentSpread, { className: "relative" }, kids),
         guide ? h(Guide, { mode: props.mode, lib: lib, docsOf: docsOf, entriesFor: entriesFor, open: open, picked: picked, here: here, current: current,
           trace: trace, clearTrace: function () { setTrace(null); }, notes: props.notes, noteActs: props.noteActs, ask: ask,
-          size: size, setSize: setSize, goNote: goNote,
+          size: size, setSize: setSize, goNote: goNote, changes: props.changes, goChange: goChange, choose: props.changeActs.choose,
           verdicts: props.verdicts, walk: walk, close: function () { setGuide(false); } }) : null),
       offer ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "sweep-offer", style: { left: offer.left, top: offer.top },
         onMouseDown: function (event) { event.preventDefault(); }, onMouseUp: function (event) { event.stopPropagation(); }, onClick: takeOffer },
@@ -1840,6 +2066,55 @@ details.part:not([open]) { gap: 0; }
                 { key: "also", header: "Also in" }, { key: "words", header: "Words", align: "right" }, { key: "status", header: "Status" },
                 { key: "verdict", header: "Verdict" }],
       groups: groups }));
+  }
+
+  // ---- every change, in one place
+
+  // Every change in the library, newest first and grouped by day, narrowed by document, person, kind
+  // and time. The provider and the auditor open the same list.
+  var KINDS_SHOWN = [["", "Every kind"], ["wording", "Wording"], ["answer", "Answers"], ["rise", "Rise suggestions"], ["record", "Records saved"], ["verdict", "Verdicts"]];
+  function AllChanges(props) {
+    var lib = props.lib, auditDay = calendarDay(lib.lastAudit);
+    var f = props.filter, set = function (key, value) { var next = Object.assign({}, f); next[key] = value; props.setFilter(next); };
+    var kindOf = function (c) { return c.kind === "taken" || c.kind === "kept" ? "rise" : c.kind; };
+    var after = { all: null, audit: new Date(lib.lastAudit + "T00:00:00+10:00"), week: new Date(Date.now() - 7 * 864e5) }[f.when || "all"];
+    var shown = newestFirst(props.changes.filter(function (c) {
+      return (!f.binder || c.binder === f.binder) && (!f.doc || c.doc === f.doc) && (!f.who || c.who === f.who) && (!f.kind || kindOf(c) === f.kind) && (!after || new Date(c.when) > after);
+    }));
+    var docs = {}, people = {}, binders = {}, standards = {};
+    props.changes.forEach(function (c) { docs[c.doc] = c.title; people[c.who] = true; binders[c.binder] = true; });
+    lib.modules.forEach(function (m) { m.standards.forEach(function (x) { standards[x.key] = x.index + " " + x.heading; }); });
+    var pick = function (id, label, key, options) {
+      return h("div", { className: "filter" }, h(R.Label, { htmlFor: id }, label),
+        h(R.NativeSelect, { id: id, value: f[key] || "", onChange: function (event) { set(key, event.target.value); } },
+          options.map(function (o) { return h("option", { key: o[0], value: o[0] }, o[1]); })));
+    };
+    var days = [];
+    shown.forEach(function (c) {
+      var day = onDay(c.when), last = days[days.length - 1];
+      if (last && last.day === day) last.list.push(c); else days.push({ day: day, list: [c] });
+    });
+    return h("section", { className: "all-changes", "aria-labelledby": "changes-title" },
+      h("div", { className: "changes-head" },
+        h("h2", { id: "changes-title" }, "Every change"),
+        h("p", { className: "quiet" }, "Every change to a document or a record, with who made it, when and why. The provider and the auditor see the same list.")),
+      props.changes.some(function (c) { return c.example; }) ? h("p", { className: "changes-note" },
+        "Changes marked Example show how Rise keeps a record once you adopt a document. Nothing in this example is saved: what you do here lasts until you reload the page.") : null,
+      h("div", { className: "filters" },
+        pick("change-standard", "Standard", "binder", [["", "Every standard"]].concat(Object.keys(binders).sort().map(function (k) { return [k, standards[k] || k]; }))),
+        pick("change-doc", "Document", "doc", [["", "Every document"]].concat(Object.keys(docs).sort().map(function (id) { return [id, id + " " + docs[id]]; }))),
+        pick("change-who", "Person", "who", [["", "Everyone"]].concat(Object.keys(people).sort().map(function (p) { return [p, p]; }))),
+        pick("change-kind", "Kind of change", "kind", KINDS_SHOWN),
+        h("div", { className: "filter" }, h("span", { className: "filter-label" }, "When"),
+          h(Seg, { label: "When the change was made", value: f.when || "all", onChange: function (v) { set("when", v); },
+            options: [["all", "Any time"], ["audit", "Since the last audit, " + auditDay + " (example)"], ["week", "Last 7 days"]] }))),
+      h("p", { className: "changes-count", role: "status" }, shown.length ? changeCount(shown.length) : "No changes match these choices."),
+      shown.length ? h("div", { className: "changes-cols", "aria-hidden": true },
+        h("span", null, "When and who"), h("span", null, "What changed"), h("span", null, "The words"), h("span", null, "Why")) : null,
+      days.map(function (d) {
+        return h("section", { className: "changes-day", key: d.day, "aria-label": d.day }, h("h3", null, d.day),
+          d.list.map(function (c) { return h(ChangeCard, { key: c.id, change: c, mode: props.mode, row: true, onGo: function () { props.open(c); }, onChoose: props.choose }); }));
+      }));
   }
 
   // ---- search: an address, a document, or words, across every binder
@@ -1989,6 +2264,26 @@ details.part:not([open]) { gap: 0; }
     var vd = React.useState({}), verdicts = vd[0], setVerdicts = vd[1];
     var nt = React.useState({}), notes = nt[0], setNotes = nt[1];  // address -> threads, in the platform's own comment shape
     var auditor = mode === "auditor";
+    // The one log: the library's sample changes, then everything done in this visit. Nothing is saved.
+    var lg = React.useState([]), logged = lg[0], setLogged = lg[1];
+    var ch = React.useState({}), chosen = ch[0], setChosen = ch[1];   // Rise's suggestions answered in this visit
+    var cf = React.useState({}), changeFilter = cf[0], setChangeFilter = cf[1];
+    var changes = lib ? lib.changes.map(function (c) { return chosen[c.id] ? Object.assign({}, c, { state: chosen[c.id] }) : c; }).concat(logged) : [];
+    var changeActs = {
+      log: function (entry) {
+        setLogged(function (now) {
+          return now.concat(Object.assign({ id: "change-" + Date.now() + "-" + now.length, example: false, binder: key,
+            who: "You", role: auditor ? "Auditor" : "Provider", when: new Date().toISOString() }, entry));
+        });
+      },
+      // The provider answers a Rise suggestion: the answer is a change of its own, kept in the log.
+      choose: function (c, state) {
+        setChosen(function (now) { var next = Object.assign({}, now); next[c.id] = state; return next; });
+        changeActs.log({ kind: state, binder: c.binder, step: c.step, doc: c.doc, title: c.title, holder: c.holder, cite: c.cite,
+          was: state === "taken" ? c.was : null, now: state === "taken" ? c.now : null, swap: state === "taken" ? c.swap : null,
+          note: state === "taken" ? "Rise's suggestion is now the wording on the page." : "Rise's suggestion was not used. The page keeps your wording." });
+      }
+    };
     var noteActs = {
       add: function (address, body, parent, anchor) {
         var made = { id: "note-" + Date.now(), author: auditor ? "Auditor" : "Provider", createdAt: new Date().toISOString(), body: body,
@@ -2019,7 +2314,12 @@ details.part:not([open]) { gap: 0; }
         });
       }
     };
-    var setVerdict = function (id, value) { setVerdicts(function (now) { var next = Object.assign({}, now); next[id] = value; return next; }); };
+    var setVerdict = function (id, value) {
+      var doc = lib.docs[id], said = function (v) { return VERDICT[v] ? VERDICT[v][0] : "Not checked"; };
+      if (doc && value !== (verdicts[id] || "")) changeActs.log({ kind: "verdict", step: doc.step, doc: id, title: doc.title, holder: "top-" + doc.step,
+        cite: "the whole document", was: said(verdicts[id]), now: said(value) });
+      setVerdicts(function (now) { var next = Object.assign({}, now); next[id] = value; return next; });
+    };
 
     React.useEffect(function () {
       read("library").then(function (found) {
@@ -2052,7 +2352,8 @@ details.part:not([open]) { gap: 0; }
 
     if (failed) return h("p", { className: "loading" }, "The library could not be read: " + failed + ". Reload the page to try again.");
     if (!lib) return h("p", { className: "loading" }, "Loading the library.");
-    var shown = h(Seg, { key: "shown", label: "What is shown", value: view, options: [["binder", "This standard"], ["table", "All documents"]], onChange: setView });
+    var shown = h(Seg, { key: "shown", label: "What is shown", value: view,
+      options: [["binder", "This standard"], ["table", "All documents"], ["changes", "All changes"]], onChange: setView });
     var search = h(Search, { key: "search", here: key, steps: lib.steps, open: function (row) {
       var doc = row.a.split(" ").slice(0, row.a.charAt(0) === "s" ? 2 : 1).join(" ");
       var stay = data && (data.where[row.a] || data.where[doc]);
@@ -2083,10 +2384,15 @@ details.part:not([open]) { gap: 0; }
         view === "table" ? h(React.Fragment, null,
           framedControls ? h("div", { className: "stage-row" }, h("div", { className: "pills" }, framedControls)) : null,
           h(AllDocuments, { lib: lib, verdicts: verdicts, open: function (binder, id) { openAt(binder, { address: id }); } }))
+        : view === "changes" ? h(React.Fragment, null,
+          framedControls ? h("div", { className: "stage-row" }, h("div", { className: "pills" }, framedControls)) : null,
+          h(AllChanges, { lib: lib, changes: changes, mode: mode, filter: changeFilter, setFilter: setChangeFilter, choose: changeActs.choose,
+            open: function (c) { openAt(c.binder, { change: c }); } }))
         : !data ? h("p", { className: "loading" }, "Opening the binder.")
         : h(Book, { key: data.key, data: data, lib: lib, mode: mode, layout: layout, setLayout: setLayout, tools: tools, verdicts: verdicts, setVerdict: setVerdict,
             controls: framedControls,
-            notes: notes, noteActs: noteActs,
+            notes: notes, noteActs: noteActs, changes: changes, changeActs: changeActs, lastAudit: lib.lastAudit,
+            showChanges: function (asked) { setChangeFilter(asked.since ? { when: "audit", binder: asked.binder } : {}); setView("changes"); },
             arrive: arrive, leave: leave,
             openBinder: function (binder, address) { openAt(binder, address ? { address: address } : null); } })));
   }
