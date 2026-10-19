@@ -213,9 +213,13 @@ details.part:not([open]) { gap: 0; }
 /* ---- the trace: one statement, and every place it is carried on the other pages */
 .doc .item { cursor: pointer; }
 .doc .item:hover { background: var(--muted); }
-.doc .item.is-picked, .reg th.is-picked { background: var(--tab-soft); box-shadow: inset 4px 0 0 var(--tab-solid); }
-.doc .item.is-traced, .reg th.is-traced { background: var(--primary-surface); box-shadow: inset 4px 0 0 var(--primary); }
-.doc .item.is-traced.is-through, .reg th.is-traced.is-through { background: none; box-shadow: inset 4px 0 0 var(--border); }  /* reached through another statement: marked, not lit */.trace-head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-s3); padding-right: var(--spacing-s3); }
+/* The marks sit just left of the statement, in the page's margin, so the bar never covers its number ("C4"). */
+.doc .item.is-picked { background: var(--tab-soft); box-shadow: -0.5rem 0 0 var(--tab-soft), -0.75rem 0 0 var(--tab-solid); }
+.doc .item.is-traced { background: var(--primary-surface); box-shadow: -0.5rem 0 0 var(--primary-surface), -0.75rem 0 0 var(--primary); }
+.reg th.is-picked { background: var(--tab-soft); box-shadow: inset 4px 0 0 var(--tab-solid); }
+.reg th.is-traced { background: var(--primary-surface); box-shadow: inset 4px 0 0 var(--primary); }
+.doc .item.is-traced.is-through { background: none; box-shadow: -0.75rem 0 0 var(--border); }
+.reg th.is-traced.is-through { background: none; box-shadow: inset 4px 0 0 var(--border); }  /* reached through another statement: marked, not lit */.trace-head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-s3); padding-right: var(--spacing-s3); }
 .trace-said { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; padding-bottom: var(--spacing-s3); }
 .trace-hint { padding-bottom: var(--spacing-s3); }
 .trace-step { display: grid; gap: 1px; padding-top: var(--spacing-s4); }
@@ -642,6 +646,8 @@ details.part:not([open]) { gap: 0; }
     judged.forEach(function (doc) { count[props.verdicts[doc.id] || "none"] += 1; });
     var tally = [["all", "All " + judged.length], ["conforms", "Conform " + count.conforms], ["non-conforming", "Do not " + count["non-conforming"]], ["none", "Not checked " + count.none]];
     var zo = React.useState("index"), zone = zo[0], setZone = zo[1];  // what the lower half holds while nothing is selected
+    // A page's "Comments" button asks for the comments to be shown (Jesse, 19 Oct: "in the side by side where is the comments").
+    React.useEffect(function () { if (props.ask) setZone(props.ask.zone); }, [props.ask && props.ask.n]);
     var narrowed = filter !== "all";
     var reading = lib.steps.filter(function (step) { return step.key === props.current; })[0];
     var doc = props.docsOf(props.current).filter(function (d) { return d.id === props.picked[props.current]; })[0];
@@ -881,6 +887,13 @@ details.part:not([open]) { gap: 0; }
     var of = React.useState(null), offer = of[0], setOffer = of[1];  // words just highlighted, and where to offer a comment on them
     var sz = React.useState("side"), size = sz[0], setSize = sz[1];    // how much of the window the guide takes: side, half or full
     var pd = React.useState(null), pending = pd[0], setPending = pd[1];  // a comment's place to go back to, once its page is drawn
+    var ak = React.useState(null), ask = ak[0], setAsk = ak[1];          // the guide asked to show a part of itself, such as the comments
+    // Open comments on a document: on the document as a whole, and on any statement or line in it.
+    function openNotesOn(docId) {
+      return Object.keys(props.notes).reduce(function (sum, address) {
+        return sum + (address === docId || address.indexOf(docId + " ") === 0 ? props.notes[address].filter(function (t) { return !t.resolved; }).length : 0);
+      }, 0);
+    }
     var guided = React.useRef(0);                                      // the width the guide takes beside the book, in rem
     guided.current = guide && wide() ? (size === "side" ? 24 : window.innerWidth / (size === "half" ? 2 : 1) / rem()) : 0;
     var room = function () { return capacity(STEPS.length, guided.current); };
@@ -1254,6 +1267,10 @@ details.part:not([open]) { gap: 0; }
         title: doc ? doc.title : label, subtitle: doc ? doc.subtitle : all + (all === 1 ? " document" : " documents") + " for this standard at 0.3.0",
         statusSlot: doc && doc.off ? h("p", { className: "off-note" }, doc.off) : null,
         action: doc ? h("div", { className: "page-acts" },
+          // The page says how many comments it holds and opens them in one press, in either way of working.
+          openNotesOn(doc.id) ? h(R.Button, { type: "button", variant: "neutral", emphasis: "solid", size: "sm",
+            onClick: function () { if (size === "full") setSize("half"); setGuide(true); setTrace(null); setAsk({ zone: "comments", n: Date.now() }); } },
+            h(R.Icon, { name: "comment" }), openNotesOn(doc.id) + (openNotesOn(doc.id) === 1 ? " comment" : " comments")) : null,
           h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { commentOn(step, doc, label); } },
             h(R.Icon, { name: "comment" }), "Comment"),
           step !== "legislation"
@@ -1400,7 +1417,7 @@ details.part:not([open]) { gap: 0; }
       h("div", { className: "book-row" + (guide && size === "full" ? " is-full" : "") },
         h(R.DocumentSpread, { className: "relative" }, kids),
         guide ? h(Guide, { mode: props.mode, lib: lib, docsOf: docsOf, entriesFor: entriesFor, open: open, picked: picked, here: here, current: current,
-          trace: trace, clearTrace: function () { setTrace(null); }, notes: props.notes, noteActs: props.noteActs,
+          trace: trace, clearTrace: function () { setTrace(null); }, notes: props.notes, noteActs: props.noteActs, ask: ask,
           size: size, setSize: setSize, goNote: goNote,
           verdicts: props.verdicts, walk: walk, close: function () { setGuide(false); } }) : null),
       offer ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "sweep-offer", style: { left: offer.left, top: offer.top },
