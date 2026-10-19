@@ -136,15 +136,19 @@ details.part:not([open]) { gap: 0; }
 .lines dt { font-size: 0.875em; color: var(--muted-foreground); }
 .lines dd { margin: 0; overflow-wrap: anywhere; }
 .trail, .quiet, .hint { font-size: 0.875em; color: var(--muted-foreground); }
-.rel::after { content: ". "; }
-.lk:not(:last-of-type)::after { content: ", "; }
+/* A part's links: one row of tags, where it comes from and where it leads, the way the bounce
+ * prototype draws them (Jesse, 19 Oct). Each tag opens its place beside this page. */
+.trail { display: flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s2) var(--spacing-s5); }
+.rel { display: inline-flex; flex-wrap: wrap; align-items: center; gap: var(--spacing-s2); }
+.trail .go { display: inline-flex; align-items: center; gap: var(--spacing-s2); padding: var(--spacing-s1) var(--spacing-s3); border: 1px solid var(--primary-solid); border-radius: var(--radius-full); background: var(--card); color: var(--primary-foreground); font-weight: 600; line-height: 1.4; text-decoration: none; }
+.trail .go:hover { background: var(--primary-surface); }
+.trail .go:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .lk-more { font-style: normal; }
 
-/* ---- two views of the same pages. A provider opens one page, with parts named in words and
- * only where a part leads. An auditor gets codes and both directions of every link. */
+/* ---- two views of the same pages. A provider opens one page, with parts named in words and the
+ * first three links of each kind. An auditor gets codes and every link. */
 .is-provider .as-code, .is-auditor .as-name, .is-auditor .lk-more { display: none; }
-.is-provider .rel.arriving, .is-provider .trail:not(.leads), .is-provider .lk:nth-of-type(n+4) { display: none; }
-.is-provider .lk:nth-of-type(3):not(:last-of-type)::after { content: " "; }
+.is-provider .lk:nth-of-type(n+4) { display: none; }
 /* The extras for judging the design itself stay out of both views until Design tools is ticked. */
 .frame:not(.has-tools) details.part > summary .count { font-size: 0; }
 .frame:not(.has-tools) details.part > summary .count::after { font-size: max(0.875rem, 14px); }
@@ -211,13 +215,7 @@ details.part:not([open]) { gap: 0; }
 .doc .item:hover { background: var(--muted); }
 .doc .item.is-picked, .reg th.is-picked { background: var(--tab-soft); box-shadow: inset 4px 0 0 var(--tab-solid); }
 .doc .item.is-traced, .reg th.is-traced { background: var(--primary-surface); box-shadow: inset 4px 0 0 var(--primary); }
-.doc .item.is-traced.is-through, .reg th.is-traced.is-through { background: none; box-shadow: inset 4px 0 0 var(--border); }  /* reached through another statement: marked, not lit */
-/* The selected statement's links, under it. Each opens its place beside this page, in the colour its places are marked in. */
-.item > .bounce { grid-column: 2; display: flex; flex-wrap: wrap; gap: var(--spacing-s2); margin-top: var(--spacing-s3); user-select: none; }
-.bounce-tag { display: inline-flex; align-items: center; gap: var(--spacing-s2); padding: var(--spacing-s1) var(--spacing-s3); border: 1px solid var(--primary-solid); border-radius: var(--radius-full); background: var(--card); color: var(--primary-foreground); font: inherit; font-size: max(0.875rem, 14px); font-weight: 600; line-height: 1.4; text-align: left; cursor: pointer; }
-.bounce-tag:hover { background: var(--primary-surface); }
-.bounce-tag:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
-.trace-head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-s3); padding-right: var(--spacing-s3); }
+.doc .item.is-traced.is-through, .reg th.is-traced.is-through { background: none; box-shadow: inset 4px 0 0 var(--border); }  /* reached through another statement: marked, not lit */.trace-head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-s3); padding-right: var(--spacing-s3); }
 .trace-said { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; padding-bottom: var(--spacing-s3); }
 .trace-hint { padding-bottom: var(--spacing-s3); }
 .trace-step { display: grid; gap: 1px; padding-top: var(--spacing-s4); }
@@ -246,7 +244,6 @@ details.part:not([open]) { gap: 0; }
 @media (max-width: 71.99rem) { .guide-size { display: none; } }
 @media (max-width: 71.99rem) { .guide { position: absolute; z-index: 20; top: 0; right: 0; bottom: 0; width: min(23rem, 92vw); } }
 .go { color: inherit; text-decoration: underline; text-underline-offset: 0.2em; text-decoration-thickness: 1px; }
-.trail .go { color: var(--foreground); }
 .term { font: inherit; font-weight: 600; color: inherit; padding: 0; border: 0; background: none; cursor: help; }
 .term:hover { text-decoration: underline; text-underline-offset: 0.2em; }
 .fill { background: var(--primary-subtle); }
@@ -747,7 +744,7 @@ details.part:not([open]) { gap: 0; }
       body = notes;
     } else {
       head = [h(React.Fragment, { key: "choose" }, choose), h("p", { className: "guide-title", key: "title" }, doc ? doc.title : reading.label)];
-      body = [doc ? h("p", { className: "guide-what trace-hint", key: "hint" }, "Select a statement, or one line of it, to see what it links to or to comment on it.")
+      body = [doc ? h("p", { className: "guide-what trace-hint", key: "hint" }, "Select a statement, or one line of it, to comment on it or see where else it appears.")
           : h("p", { className: "guide-what", key: "hint" }, "Choose a document from the list on the page."),
         entries.map(function (e, n) {
           if (e.group) return h("p", { className: "ix-group", key: n }, e.label);
@@ -861,49 +858,6 @@ details.part:not([open]) { gap: 0; }
   // Side by side opens two pages, the one being read and one beside it. More can be added, up to as
   // many as the window holds (Jesse, 19 Oct: "by default 2 as not to confuse the user").
   var PAIR = 2;
-
-  // How one statement is linked to another, read from which way the link runs: down the binder is
-  // how the statement is carried out, up it is why it exists. Said once here, so every link on every
-  // page reads the same way.
-  var LINKED = {
-    legislation: { up: "Required by", many: "indicators" },
-    policy: { down: "Committed to in", up: "Carries out", many: "policy commitments" },
-    procedure: { down: "Done in", up: "Filled in during", many: "procedure steps" },
-    forms: { down: "Written down on", up: "Filled from", many: "form questions" },
-    registers: { down: "Recorded in", many: "register columns" }
-  };
-  var LINKS_SHOWN = 3;  // past this many on one page, its links share one tag, and all are marked on the page
-
-  // A selected statement's links, as tags under it, the way the bounce prototype draws them: each one
-  // opens the place it names beside this page and lights it. Only the statement's own links: places
-  // reached through another statement are listed in the guide.
-  function bounceBar(trace, steps) {
-    var bar = document.createElement("div"), from = steps.indexOf(trace.step);
-    bar.className = "bounce";
-    bar.setAttribute("data-for", trace.n);
-    bar.setAttribute("role", "group");
-    bar.setAttribute("aria-label", "What this statement links to");
-    steps.forEach(function (step, i) {
-      var hits = step === trace.step ? [] : trace.hits.filter(function (hit) { return !hit.via && hit.place.step === step; });
-      if (!hits.length) return;
-      var down = i > from, words = LINKED[step][down ? "down" : "up"];
-      var tag = function (hit, text, title) {
-        var button = document.createElement("button"), arrow = document.createElement("span");
-        button.type = "button";
-        button.className = "bounce-tag";
-        button.setAttribute("data-go", hit.address);
-        button.title = title;
-        arrow.setAttribute("aria-hidden", "true");
-        arrow.textContent = down ? "→" : "←";
-        button.appendChild(arrow);
-        button.appendChild(document.createTextNode(text));
-        bar.appendChild(button);
-      };
-      if (hits.length <= LINKS_SHOWN) hits.forEach(function (hit) { tag(hit, words + " " + hit.place.cite, hit.label || hit.place.plain); });
-      else tag(hits[0], words + " " + hits.length + " " + LINKED[step].many, "Opens the first of them. All " + hits.length + " are marked on the page.");
-    });
-    return bar.childNodes.length ? bar : null;
-  }
 
   // How many pages fit side by side: each needs about 40rem, beside the spines and a guide `guide` rem wide.
   function capacity(steps, guide) {
@@ -1159,16 +1113,6 @@ details.part:not([open]) { gap: 0; }
       if (trace) {
         trace.hits.forEach(function (hit) { if (!want[hit.place.id]) want[hit.place.id] = hit.via ? "is-traced is-through" : "is-traced"; });
         if (!trace.line && !trace.span) want[trace.id] = "is-picked";
-      }
-      // The selected statement's links, as tags under it. A register column has its links in the guide.
-      var tagged = trace && !trace.loose && trace.about !== "document" ? document.getElementById(trace.id) : null;
-      if (tagged && !(tagged.classList.contains("item") && book.current.contains(tagged))) tagged = null;
-      book.current.querySelectorAll(".bounce").forEach(function (bar) {
-        if (!tagged || bar.parentElement !== tagged || bar.getAttribute("data-for") !== String(trace.n)) bar.remove();
-      });
-      if (tagged && !tagged.querySelector(":scope > .bounce")) {
-        var tags = bounceBar(trace, STEPS);
-        if (tags) tagged.appendChild(tags);
       }
       book.current.querySelectorAll(".is-traced, .is-picked").forEach(function (node) {
         if (want[node.id]) return;
