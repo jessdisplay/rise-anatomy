@@ -212,6 +212,11 @@ details.part:not([open]) { gap: 0; }
 .doc .item.is-picked, .reg th.is-picked { background: var(--tab-soft); box-shadow: inset 4px 0 0 var(--tab-solid); }
 .doc .item.is-traced, .reg th.is-traced { background: var(--primary-surface); box-shadow: inset 4px 0 0 var(--primary); }
 .doc .item.is-traced.is-through, .reg th.is-traced.is-through { background: none; box-shadow: inset 4px 0 0 var(--border); }  /* reached through another statement: marked, not lit */
+/* The selected statement's links, under it. Each opens its place beside this page, in the colour its places are marked in. */
+.item > .bounce { grid-column: 2; display: flex; flex-wrap: wrap; gap: var(--spacing-s2); margin-top: var(--spacing-s3); user-select: none; }
+.bounce-tag { display: inline-flex; align-items: center; gap: var(--spacing-s2); padding: var(--spacing-s1) var(--spacing-s3); border: 1px solid var(--primary-solid); border-radius: var(--radius-full); background: var(--card); color: var(--primary-foreground); font: inherit; font-size: max(0.875rem, 14px); font-weight: 600; line-height: 1.4; text-align: left; cursor: pointer; }
+.bounce-tag:hover { background: var(--primary-surface); }
+.bounce-tag:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .trace-head { display: flex; align-items: center; justify-content: space-between; gap: var(--spacing-s3); padding-right: var(--spacing-s3); }
 .trace-said { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; padding-bottom: var(--spacing-s3); }
 .trace-hint { padding-bottom: var(--spacing-s3); }
@@ -742,7 +747,7 @@ details.part:not([open]) { gap: 0; }
       body = notes;
     } else {
       head = [h(React.Fragment, { key: "choose" }, choose), h("p", { className: "guide-title", key: "title" }, doc ? doc.title : reading.label)];
-      body = [doc ? h("p", { className: "guide-what trace-hint", key: "hint" }, "Select a statement, or one line of it, to comment on it or see where else it appears.")
+      body = [doc ? h("p", { className: "guide-what trace-hint", key: "hint" }, "Select a statement, or one line of it, to see what it links to or to comment on it.")
           : h("p", { className: "guide-what", key: "hint" }, "Choose a document from the list on the page."),
         entries.map(function (e, n) {
           if (e.group) return h("p", { className: "ix-group", key: n }, e.label);
@@ -853,6 +858,53 @@ details.part:not([open]) { gap: 0; }
 
   // ---- the book: one binder
 
+  // Side by side opens two pages, the one being read and one beside it. More can be added, up to as
+  // many as the window holds (Jesse, 19 Oct: "by default 2 as not to confuse the user").
+  var PAIR = 2;
+
+  // How one statement is linked to another, read from which way the link runs: down the binder is
+  // how the statement is carried out, up it is why it exists. Said once here, so every link on every
+  // page reads the same way.
+  var LINKED = {
+    legislation: { up: "Required by", many: "indicators" },
+    policy: { down: "Committed to in", up: "Carries out", many: "policy commitments" },
+    procedure: { down: "Done in", up: "Filled in during", many: "procedure steps" },
+    forms: { down: "Written down on", up: "Filled from", many: "form questions" },
+    registers: { down: "Recorded in", many: "register columns" }
+  };
+  var LINKS_SHOWN = 3;  // past this many on one page, its links share one tag, and all are marked on the page
+
+  // A selected statement's links, as tags under it, the way the bounce prototype draws them: each one
+  // opens the place it names beside this page and lights it. Only the statement's own links: places
+  // reached through another statement are listed in the guide.
+  function bounceBar(trace, steps) {
+    var bar = document.createElement("div"), from = steps.indexOf(trace.step);
+    bar.className = "bounce";
+    bar.setAttribute("data-for", trace.n);
+    bar.setAttribute("role", "group");
+    bar.setAttribute("aria-label", "What this statement links to");
+    steps.forEach(function (step, i) {
+      var hits = step === trace.step ? [] : trace.hits.filter(function (hit) { return !hit.via && hit.place.step === step; });
+      if (!hits.length) return;
+      var down = i > from, words = LINKED[step][down ? "down" : "up"];
+      var tag = function (hit, text, title) {
+        var button = document.createElement("button"), arrow = document.createElement("span");
+        button.type = "button";
+        button.className = "bounce-tag";
+        button.setAttribute("data-go", hit.address);
+        button.title = title;
+        arrow.setAttribute("aria-hidden", "true");
+        arrow.textContent = down ? "→" : "←";
+        button.appendChild(arrow);
+        button.appendChild(document.createTextNode(text));
+        bar.appendChild(button);
+      };
+      if (hits.length <= LINKS_SHOWN) hits.forEach(function (hit) { tag(hit, words + " " + hit.place.cite, hit.label || hit.place.plain); });
+      else tag(hits[0], words + " " + hits.length + " " + LINKED[step].many, "Opens the first of them. All " + hits.length + " are marked on the page.");
+    });
+    return bar.childNodes.length ? bar : null;
+  }
+
   // How many pages fit side by side: each needs about 40rem, beside the spines and a guide `guide` rem wide.
   function capacity(steps, guide) {
     return Math.max(1, Math.min(steps, Math.floor((window.innerWidth - rem() * (guide + 4) - steps * 24) / (rem() * 40))));
@@ -878,12 +930,13 @@ details.part:not([open]) { gap: 0; }
     var guided = React.useRef(0);                                      // the width the guide takes beside the book, in rem
     guided.current = guide && wide() ? (size === "side" ? 24 : window.innerWidth / (size === "half" ? 2 : 1) / rem()) : 0;
     var room = function () { return capacity(STEPS.length, guided.current); };
-    // The pages to show around one of them: that page alone, or with as many of the others as fit when working side by side.
-    function around(step) {
-      var want = [step];
-      if (props.layout === "split") STEPS.forEach(function (other) { if (want.length < room() && want.indexOf(other) === -1) want.push(other); });
-      return want;
+    // A page and the one beside it: the next page of the binder, or the one before for the last.
+    function pairFor(step) {
+      var i = STEPS.indexOf(step);
+      return room() < PAIR ? [step] : [step, STEPS[i + 1] || STEPS[i - 1]];
     }
+    // The pages to show around one of them: that page alone, or with one beside it when working side by side.
+    function around(step) { return props.layout === "split" ? pairFor(step) : [step]; }
     var o = React.useState(function () { return around(STEPS[0]); }), open = o[0], setOpen = o[1];  // oldest first
     var p = React.useState(function () {
       var first = {};
@@ -918,13 +971,15 @@ details.part:not([open]) { gap: 0; }
     // A wider guide leaves room for fewer pages.
     React.useEffect(function () { setOpen(function (now) { return now.length > room() ? now.slice(-room()) : now; }); }, [size, guide]);
 
-    // Open pages, keeping `kept` on screen: when the window is full, the page opened longest ago makes room.
-    function show(steps, kept) {
+    // Open pages, keeping `kept` on screen. Pages are added until the window is full. With `swap` (a
+    // link being followed) the row keeps the number of pages it has, two at least, so the page the link
+    // was followed from stays and another makes room. Either way the page opened longest ago goes first.
+    function show(steps, kept, swap) {
       setActive(steps[steps.length - 1]);
       setOpen(function (now) {
-        var next = now.slice();
+        var next = now.slice(), most = swap ? Math.min(room(), Math.max(PAIR, now.length)) : room();
         steps.forEach(function (step) { if (next.indexOf(step) === -1) next.push(step); });
-        while (next.length > room()) {
+        while (next.length > most) {
           var drop = next.findIndex(function (x) { return steps.indexOf(x) === -1 && x !== kept; });
           next.splice(drop === -1 ? 0 : drop, 1);
         }
@@ -972,7 +1027,7 @@ details.part:not([open]) { gap: 0; }
         }
       }
       pick(place.step, place.doc);
-      show([place.step], from);
+      show([place.step], from, true);
       setLit({ id: place.id, n: Date.now() });
     }
 
@@ -1105,6 +1160,16 @@ details.part:not([open]) { gap: 0; }
         trace.hits.forEach(function (hit) { if (!want[hit.place.id]) want[hit.place.id] = hit.via ? "is-traced is-through" : "is-traced"; });
         if (!trace.line && !trace.span) want[trace.id] = "is-picked";
       }
+      // The selected statement's links, as tags under it. A register column has its links in the guide.
+      var tagged = trace && !trace.loose && trace.about !== "document" ? document.getElementById(trace.id) : null;
+      if (tagged && !(tagged.classList.contains("item") && book.current.contains(tagged))) tagged = null;
+      book.current.querySelectorAll(".bounce").forEach(function (bar) {
+        if (!tagged || bar.parentElement !== tagged || bar.getAttribute("data-for") !== String(trace.n)) bar.remove();
+      });
+      if (tagged && !tagged.querySelector(":scope > .bounce")) {
+        var tags = bounceBar(trace, STEPS);
+        if (tags) tagged.appendChild(tags);
+      }
       book.current.querySelectorAll(".is-traced, .is-picked").forEach(function (node) {
         if (want[node.id]) return;
         node.classList.remove("is-traced", "is-through", "is-picked");
@@ -1175,7 +1240,7 @@ details.part:not([open]) { gap: 0; }
       keep(setSaved, saved, doc.id, "Saved. The row is in " + reg.id + ", open beside this page.");
       if (family) reg.register.sheets.some(function (x, i) { if (x.name.toLowerCase().indexOf(family) === 0) { keep(setSheets, sheets, reg.id, i); return true; } return false; });
       pick("registers", reg.id);
-      show(["registers"], "forms");
+      show(["registers"], "forms", true);
       setLit({ id: "row-" + reg.id + "-" + (next[reg.id].length - 1), n: Date.now() });
     }
 
@@ -1292,13 +1357,25 @@ details.part:not([open]) { gap: 0; }
     // One page, or pages side by side. The switch says which, and turning it on opens the next page beside this one.
     var split = open.length > 1, canSplit = room() > 1, beside = split || props.layout === "split";
     var layout = h(Seg, { label: "Pages shown", value: split ? "split" : "one",
-      options: [["one", "One page"], ["split", "Side by side", !canSplit && !split, canSplit || split ? undefined : "This window is too narrow for two pages"]],
+      options: [["one", "One page", false, "Read one page at a time"],
+        ["split", "Side by side", !canSplit && !split, canSplit || split ? "Two pages: the one you are reading, and one beside it" : "This window is too narrow for two pages"]],
       onChange: function (to) {
         if (size === "full") setSize("half");  // the book comes back into view to show what was asked for
         props.setLayout(to);  // the choice lasts: the next document and the next standard open the same way
         if (to === "one") only(current);
-        else { setActive(current); setOpen(function () { var want = [current]; STEPS.forEach(function (other) { if (want.length < room() && want.indexOf(other) === -1) want.push(other); }); return want; }); }
+        else { setActive(current); setOpen(pairFor(current)); }
       } });
+
+    // Side by side, one more page can join the row, up to as many as the window holds: the next page of
+    // the binder after those showing, or else the first one not showing.
+    var shut = STEPS.filter(function (s) { return open.indexOf(s) === -1; });
+    var furthest = Math.max.apply(null, open.map(function (s) { return STEPS.indexOf(s); }));
+    var joining = shut.filter(function (s) { return STEPS.indexOf(s) > furthest; })[0] || shut[0];
+    var noRoom = open.length >= room();
+    var addPage = beside && joining ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", disabled: noRoom,
+      title: noRoom ? "There is no room for another page in this window" : "Open " + lib.steps[STEPS.indexOf(joining)].label + " beside the others",
+      onClick: function () { if (size === "full") setSize("half"); show([joining], null); } },
+      h(R.Icon, { name: "add" }), "Add a page") : null;
 
     var kids = [];
     STEPS.forEach(function (step, i) {
@@ -1373,7 +1450,7 @@ details.part:not([open]) { gap: 0; }
     }, [offer]);
 
     return h("div", { className: "book", onClick: onClick, onMouseUp: onSweep, ref: book },
-      h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, props.controls, layout, pills,
+      h("div", { className: "stage-row" }, trail, h("div", { className: "pills" }, props.controls, layout, pills, addPage,
         guide ? null : h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { setGuide(true); } },
           h(R.Icon, { name: "list" }), props.mode === "auditor" ? "Audit" : "Guide"))),
       h("div", { className: "book-row" + (guide && size === "full" ? " is-full" : "") },
