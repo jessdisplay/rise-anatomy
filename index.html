@@ -180,7 +180,7 @@ details.part:not([open]) { gap: 0; }
 .guide-head h2 { font-size: 1.125em; font-weight: 600; }
 .guide-acts, .page-acts { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--spacing-s3) var(--spacing-s5); }
 /* The guide at half size: the binder's list on the left, the page index, the comments or the selected statement beside it.
- * At full size it takes the place of the book and is a plain board: the documents with their verdicts, and every comment. */
+ * At full size it takes the place of the book and is a plain board: the documents with their ratings, and every comment. */
 .guide.is-wide { display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); }
 .guide.is-half { width: 50%; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); grid-template-areas: "head head" "walk page" "tally page" "list page"; }
 .guide.is-full { flex: 1; width: auto; grid-template-columns: minmax(0, 2fr) minmax(0, 3fr); grid-template-areas: "head head" "walk board" "tally board" "list board"; }
@@ -925,10 +925,12 @@ details.part:not([open]) { gap: 0; }
   // worker reads what each page is for, an auditor reads the verdict on every document and can
   // narrow the list to what still needs a look. Below, the index of the page being read.
   var TRACE_ROWS = 6;
-  var VERDICT = { conforms: ["Conforms", "success"], "non-conforming": ["Non-conforming", "destructive"] };
+  // The NDIS scale's words, the ones an auditor writes in their own report (plain language review, decision 1).
+  var VERDICT = { conforms: ["Conformity", "success"], "non-conforming": ["Non-conformity", "destructive"] };
+  var RATING_OPTIONS = [{ value: "conforms", label: "Conformity", intent: "success" }, { value: "non-conforming", label: "Non-conformity", intent: "neutral" }];
   function verdictBadge(verdict) {
     var known = VERDICT[verdict];
-    return h(R.Badge, { tone: known ? known[1] : "neutral", size: "sm", dot: !!known }, known ? known[0] : "Not checked");
+    return h(R.Badge, { tone: known ? known[1] : "neutral", size: "sm", dot: !!known }, known ? known[0] : "Awaiting rating");
   }
 
   // ---- changes. One log, never saved drafts (the 13 Oct decision), shown in four places: a mark on the
@@ -943,7 +945,7 @@ details.part:not([open]) { gap: 0; }
   function onDay(instant) { return ON_DAY.format(new Date(instant)); }
   function calendarDay(day) { return CALENDAR_DAY.format(new Date(day + "T00:00:00Z")); }
   var CHANGE_SAID = { wording: "Wording changed", answer: "Answer changed", rise: "Rise suggests new wording",
-    taken: "Rise's new wording used", kept: "Own wording kept", record: "Record saved", verdict: "Verdict given" };
+    taken: "Rise's new wording used", kept: "Own wording kept", record: "Record saved", verdict: "Rating given" };
   function newestFirst(list) { return list.slice().sort(function (a, b) { return new Date(b.when) - new Date(a.when); }); }
   function changeCount(n) { return n + (n === 1 ? " change" : " changes"); }
   // A Rise suggestion still waiting for the provider's answer.
@@ -1031,7 +1033,7 @@ details.part:not([open]) { gap: 0; }
     lib.steps.forEach(function (step) { if (step.key !== "legislation") judged = judged.concat(props.docsOf(step.key)); });
     var count = { conforms: 0, "non-conforming": 0, none: 0 };
     judged.forEach(function (doc) { count[props.verdicts[doc.id] || "none"] += 1; });
-    var tally = [["all", "All " + judged.length], ["conforms", "Conforms " + count.conforms], ["non-conforming", "Doesn't conform " + count["non-conforming"]], ["none", "Not checked " + count.none]];
+    var tally = [["all", "All " + judged.length], ["conforms", "Conformity " + count.conforms], ["non-conforming", "Non-conformity " + count["non-conforming"]], ["none", "Awaiting rating " + count.none]];
     var zo = React.useState("index"), zone = zo[0], setZone = zo[1];  // what the lower half holds while nothing is selected
     // A page's "Comments" button asks for the comments to be shown (Jesse, 19 Oct: "in the side by side where is the comments").
     React.useEffect(function () {
@@ -1189,7 +1191,7 @@ details.part:not([open]) { gap: 0; }
         h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm", className: "walk-next", disabled: !props.walk.next,
           title: props.walk.next ? "Next: " + props.walk.next.label : undefined, onClick: props.walk.next ? props.walk.next.go : undefined },
           h("span", { className: "walk-label" }, props.walk.next ? "Next: " + props.walk.next.label : "End of the library"), h(R.Icon, { name: "arrow-right" }))),
-      auditor ? h("div", { className: "tally" }, h(Seg, { label: "Show documents by verdict", value: filter, options: tally, onChange: setFilter })) : null,
+      auditor ? h("div", { className: "tally" }, h(Seg, { label: "Show documents by rating", value: filter, options: tally, onChange: setFilter })) : null,
       h("nav", { className: "guide-list", ref: list, "aria-label": "Pages of this binder" }, lib.steps.map(function (step, i) {
         var law = step.key === "legislation";
         var list = law ? [] : props.docsOf(step.key).filter(function (d) { return !narrowed || (props.verdicts[d.id] || "none") === filter; });
@@ -1826,7 +1828,7 @@ details.part:not([open]) { gap: 0; }
             onClick: function () { if (size === "full") setSize("half"); setGuide(true); setTrace(null); setAsk({ zone: "changes", n: Date.now() }); } },
             h(R.Icon, { name: "pencil" }), changeCount(changesOn(doc.id).length)) : null,
           step !== "legislation" && props.mode === "auditor"
-            ? h(R.ConformanceControl, { value: props.verdicts[doc.id] || "", onValueChange: function (value) { props.setVerdict(doc.id, value); } }) : null,
+            ? h(R.ConformanceControl, { value: props.verdicts[doc.id] || "", options: RATING_OPTIONS, onValueChange: function (value) { props.setVerdict(doc.id, value); } }) : null,
           open.length > 1 ? h(R.Button, { type: "button", variant: "neutral", emphasis: "ghost", size: "icon-sm", className: "page-close",
             "aria-label": "Close the " + label + " page", title: "Close this page", onClick: function () { closePage(step); } }, h(R.Icon, { name: "close" })) : null) : null,
         basis: open.length > 1 ? 100 / open.length : null, className: "binder-page" + (open.length > 2 ? " is-tight" : ""),
@@ -1986,7 +1988,7 @@ details.part:not([open]) { gap: 0; }
         h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm", onClick: function () { props.showChanges({ since: true, binder: data.key }); } },
           h(R.Icon, { name: "pencil" }), since ? changeCount(since) + " since the last audit" : "No changes since the last audit"),
         checked < reviewable.length ? h(R.Button, { type: "button", variant: "neutral", emphasis: "outline", size: "sm",
-          onClick: function () { setGuide(true); setTrace(null); setAsk({ filter: "none", n: Date.now() }); } }, "Show only not checked") : null,
+          onClick: function () { setGuide(true); setTrace(null); setAsk({ filter: "none", n: Date.now() }); } }, "Show only awaiting rating") : null,
         toCheck ? h(R.Button, { type: "button", variant: "tab", emphasis: "solid", size: "sm",
           onClick: function () { remember(current ? lib.steps[STEPS.indexOf(current)].label : "where you were"); pick(toCheck.step, toCheck.doc.id);
             if (beside) show([toCheck.step], null, true); else only(toCheck.step); } },
@@ -2064,7 +2066,7 @@ details.part:not([open]) { gap: 0; }
     return h("div", { className: "all-docs", onClick: onRow }, h(R.DataTable, { caption: "Every document in the library",
       columns: [{ key: "doc", header: "Document" }, { key: "title", header: "Title" }, { key: "page", header: "Page" }, { key: "standard", header: "Standard" },
                 { key: "also", header: "Also in" }, { key: "words", header: "Words", align: "right" }, { key: "status", header: "Status" },
-                { key: "verdict", header: "Verdict" }],
+                { key: "verdict", header: "Rating" }],
       groups: groups }));
   }
 
@@ -2072,7 +2074,7 @@ details.part:not([open]) { gap: 0; }
 
   // Every change in the library, newest first and grouped by day, narrowed by document, person, kind
   // and time. The provider and the auditor open the same list.
-  var KINDS_SHOWN = [["", "Every kind"], ["wording", "Wording"], ["answer", "Answers"], ["rise", "Rise suggestions"], ["record", "Records saved"], ["verdict", "Verdicts"]];
+  var KINDS_SHOWN = [["", "Every kind"], ["wording", "Wording"], ["answer", "Answers"], ["rise", "Rise suggestions"], ["record", "Records saved"], ["verdict", "Ratings"]];
   function AllChanges(props) {
     var lib = props.lib, auditDay = calendarDay(lib.lastAudit);
     var f = props.filter, set = function (key, value) { var next = Object.assign({}, f); next[key] = value; props.setFilter(next); };
@@ -2315,7 +2317,7 @@ details.part:not([open]) { gap: 0; }
       }
     };
     var setVerdict = function (id, value) {
-      var doc = lib.docs[id], said = function (v) { return VERDICT[v] ? VERDICT[v][0] : "Not checked"; };
+      var doc = lib.docs[id], said = function (v) { return VERDICT[v] ? VERDICT[v][0] : "Awaiting rating"; };
       if (doc && value !== (verdicts[id] || "")) changeActs.log({ kind: "verdict", step: doc.step, doc: id, title: doc.title, holder: "top-" + doc.step,
         cite: "the whole document", was: said(verdicts[id]), now: said(value) });
       setVerdicts(function (now) { var next = Object.assign({}, now); next[id] = value; return next; });
